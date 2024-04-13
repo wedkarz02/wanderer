@@ -1,16 +1,19 @@
 #[derive(Debug)]
 pub enum MatrixError {
     SizeError,
+    ZeroPivotError,
 }
 
 impl std::fmt::Display for MatrixError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::SizeError => writeln!(f, "invalid matrix size"),
+            Self::ZeroPivotError => writeln!(f, "zero pivot - partial pivoting is required"),
         }
     }
 }
 
+#[derive(Clone)]
 pub struct Matrix {
     pub rows: Vec<Vec<f64>>,
 }
@@ -92,5 +95,36 @@ impl Matrix {
         }
 
         x_new
+    }
+
+    // https://en.wikipedia.org/wiki/Gaussian_elimination
+    pub fn gaussian(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+        let mut a = self.clone();
+        let mut b_new = b.clone();
+
+        for i in 0..b_new.len() {
+            if a.rows[i][i] == 0.0 {
+                return Err(MatrixError::ZeroPivotError);
+            }
+
+            for j in (i + 1)..b_new.len() {
+                let factor = a.rows[j][i] / a.rows[i][i];
+                for k in i..b_new.len() {
+                    a.rows[j][k] -= factor * a.rows[i][k];
+                }
+                b_new[j] -= factor * b_new[i];
+            }
+        }
+
+        let mut out = vec![0f64; b_new.len()];
+        for i in (0..b_new.len()).rev() {
+            out[i] = b_new[i];
+            for j in (i + 1)..b_new.len() {
+                out[i] -= a.rows[i][j] * out[j];
+            }
+            out[i] /= a.rows[i][i];
+        }
+
+        Ok(out)
     }
 }
