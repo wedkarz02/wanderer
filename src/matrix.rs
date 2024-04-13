@@ -13,7 +13,7 @@ impl std::fmt::Display for MatrixError {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Matrix {
     pub rows: Vec<Vec<f64>>,
 }
@@ -21,7 +21,7 @@ pub struct Matrix {
 impl std::fmt::Display for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in &self.rows {
-            writeln!(f, "{:4?}", row)?
+            writeln!(f, "{:>8.4?}", row)?
         }
         Ok(())
     }
@@ -126,5 +126,22 @@ impl Matrix {
         }
 
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_multiply() {
+        let a = Matrix::from_vecs(vec![
+            vec![1.0, 2.0, 1.0],
+            vec![2.0, 1.0, 1.0],
+            vec![1.0, 3.0, 1.0],
+        ]);
+        let b = Matrix::from_vecs(vec![vec![5.0], vec![2.0], vec![4.0]]);
+        let expected_product = Matrix::from_vecs(vec![vec![13.0], vec![16.0], vec![15.0]]);
+        assert_eq!(a.multiply(&b).unwrap(), expected_product);
     }
 }
