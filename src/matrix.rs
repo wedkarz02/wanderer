@@ -127,6 +127,32 @@ impl Matrix {
 
         Ok(out)
     }
+
+    pub fn partial_pivot(&self, b: &Vec<f64>) -> (Self, Vec<f64>) {
+        let mut a = self.clone();
+        let mut b_new = b.clone();
+
+        for i in 0..b_new.len() {
+            let mut max_row = i;
+            for k in (i + 1)..b_new.len() {
+                if a.rows[k][i].abs() > a.rows[max_row][i].abs() {
+                    max_row = k;
+                }
+            }
+
+            if max_row != i {
+                a.rows.swap(i, max_row);
+                b_new.swap(i, max_row);
+            }
+        }
+
+        (a, b_new)
+    }
+
+    pub fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+        let (a, b_new) = self.partial_pivot(b);
+        return a.gaussian(&b_new);
+    }
 }
 
 #[cfg(test)]
