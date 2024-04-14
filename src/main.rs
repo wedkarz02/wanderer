@@ -4,14 +4,7 @@ pub mod matrix;
 pub mod monte_carlo;
 
 fn main() {
-    // let mat = matrix::Matrix::from_vecs(vec![
-    //     vec![1.2, 2.6, -0.1, 1.5],
-    //     vec![4.5, 9.8, -0.4, 5.7],
-    //     vec![0.1, -0.1, -0.3, -3.5],
-    //     vec![4.5, -5.2, 4.2, -3.4],
-    // ]);
-    // let b = vec![13.15, 49.84, -14.08, -46.51];
-    let n = 1000;
+    let n = 100;
     let eps = 1e-3;
     let mat = matrix::Matrix::init_default_path(n);
     let mut b = vec![0f64; n];
@@ -34,10 +27,6 @@ fn main() {
     let gp_res = mat.gaussian_partial_pivot(&b).unwrap();
     let gp_elapsed = gp_start.elapsed();
 
-    // println!("jacobi elapsed:               {:?}", j_elapsed);
-    // println!("seidel elapsed:               {:?}", s_elapsed);
-    // println!("gauss without pivot elapsed:  {:?}", g_elapsed);
-    // println!("gauss partial pivot elapsed:  {:?}", gp_elapsed);
     println!("jacobi elapsed:          {:?} {:.6?}", j_elapsed, jacbi_res);
     println!(
         "seidel elapsed:          {:?} {:.6?}",
