@@ -75,26 +75,36 @@ impl Matrix {
         Ok(out)
     }
 
+    // https://en.wikipedia.org/wiki/Dot_product
     pub fn dot_product(x: &[f64], y: &[f64]) -> f64 {
         return x.iter().zip(y.iter()).map(|(&a, &b)| a * b).sum();
     }
 
     // https://en.wikipedia.org/wiki/Jacobi_method
-    pub fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, max_iter: usize) -> Vec<f64> {
-        let mut x = x0.to_vec();
-        let mut x_new = vec![0.0; self.rows.len()];
+    pub fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+        let mut x = x0.clone();
 
-        for _ in 0..max_iter {
-            for i in 0..self.rows.len() {
+        for it in 0..max_iter {
+            let mut x_new = vec![0.0; b.len()];
+            let mut error = 0f64;
+            for i in 0..b.len() {
                 x_new[i] = (b[i]
                     - Self::dot_product(&self.rows[i][..i], &x[..i])
                     - Self::dot_product(&self.rows[i][i + 1..], &x[i + 1..]))
                     / self.rows[i][i];
+
+                error = error.max((x_new[i] - x[i]).abs());
             }
-            x = x_new.clone();
+
+            if error < eps {
+                println!("jacobi breaking at: {} iterations", it);
+                break;
+            }
+
+            x = x_new;
         }
 
-        x_new
+        x
     }
 
     // https://en.wikipedia.org/wiki/Gaussian_elimination
@@ -128,7 +138,7 @@ impl Matrix {
         Ok(out)
     }
 
-    pub fn partial_pivot(&self, b: &Vec<f64>) -> (Self, Vec<f64>) {
+    fn partial_pivot(&self, b: &Vec<f64>) -> (Self, Vec<f64>) {
         let mut a = self.clone();
         let mut b_new = b.clone();
 
@@ -152,6 +162,32 @@ impl Matrix {
     pub fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
         let (a, b_new) = self.partial_pivot(b);
         return a.gaussian(&b_new);
+    }
+
+    pub fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+        let mut x = x0.clone();
+
+        for it in 0..max_iter {
+            let mut x_new = vec![0f64; b.len()];
+            let mut error = 0f64;
+            for i in 0..b.len() {
+                x_new[i] = (b[i]
+                    - Self::dot_product(&self.rows[i][..i], &x_new[..i])
+                    - Self::dot_product(&self.rows[i][i + 1..], &x[i + 1..]))
+                    / self.rows[i][i];
+
+                error = error.max((x_new[i] - x[i]).abs());
+            }
+
+            if error < eps {
+                println!("seidel breaking at: {} iterations", it);
+                break;
+            }
+
+            x = x_new;
+        }
+
+        x
     }
 }
 
