@@ -4,19 +4,19 @@ pub mod matrix;
 pub mod monte_carlo;
 
 fn main() {
-    let n = 100;
-    let eps = 1e-3;
+    let n = 1000;
+    let eps = 1e-12;
     let mat = matrix::Matrix::init_default_path(n);
     let mut b = vec![0f64; n];
     b[0] = 1f64;
     let x0 = vec![0.0; b.len()];
 
     let j_start = Instant::now();
-    let jacbi_res = mat.jacobi(&b, &x0, eps, 10000);
+    let jacbi_res = mat.jacobi(&b, &x0, eps, 100000);
     let j_elapsed = j_start.elapsed();
 
     let s_start = Instant::now();
-    let seidel_res = mat.gauss_seidel(&b, &x0, eps, 10000);
+    let seidel_res = mat.gauss_seidel(&b, &x0, eps, 100000);
     let s_elapsed = s_start.elapsed();
 
     let g_start = Instant::now();
@@ -40,4 +40,8 @@ fn main() {
         "gauss partial pivot elapsed:  {:?} {:.6?}",
         gp_elapsed, gp_res
     );
+    // println!("jacobi elapsed:          {:?}", j_elapsed);
+    // println!("seidel elapsed:          {:?}", s_elapsed);
+    // println!("gauss without pivot elapsed:          {:?}", g_elapsed);
+    // println!("gauss partial pivot elapsed:          {:?}", gp_elapsed);
 }

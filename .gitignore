@@ -12,3 +12,6 @@ target/
 
 # Reference files
 ref/
+
+# Temporary file for experiments
+asdf
