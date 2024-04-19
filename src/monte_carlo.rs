@@ -4,14 +4,14 @@ use rand::prelude::*;
 /// and false if he fell into the sewage well.
 ///
 /// Panics if start is not less than the size.
-pub fn walk(size: usize, start: usize) -> bool {
-    assert!(start < size);
+pub fn walk(n: usize, start: usize) -> bool {
+    assert!(start < n);
 
     let mut current_pos = start;
     loop {
         if current_pos == 0 {
             return true;
-        } else if current_pos >= size - 1 {
+        } else if current_pos >= n - 1 {
             return false;
         }
 
@@ -23,14 +23,14 @@ pub fn walk(size: usize, start: usize) -> bool {
     }
 }
 
-pub fn simulate_walk(size: usize, start: usize, n: u32) -> f64 {
+pub fn simulate_walk(n: usize, start: usize, max_iter: usize) -> f64 {
     let mut prob = 0f64;
 
-    for _ in 0..n {
-        if walk(size, start) {
+    for _ in 0..max_iter {
+        if walk(n, start) {
             prob += 1f64;
         }
     }
 
-    prob / n as f64
+    prob / max_iter as f64
 }
