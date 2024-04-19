@@ -1,47 +1,86 @@
-use std::time::Instant;
+use matrix::*;
+use std::{env, error::Error, fs, process};
 
 pub mod matrix;
 pub mod monte_carlo;
 
-fn main() {
-    let n = 1000;
-    let eps = 1e-12;
-    let mat = matrix::Matrix::init_default_path(n);
+fn dump_results(n: usize, eps: f64, max_iter: usize) -> Result<(), Box<dyn Error>> {
+    let mat = Matrix::init_default_path(n);
     let mut b = vec![0f64; n];
     b[0] = 1f64;
-    let x0 = vec![0.0; b.len()];
+    let x0 = vec![0f64; n];
 
-    let j_start = Instant::now();
-    let jacbi_res = mat.jacobi(&b, &x0, eps, 100000);
-    let j_elapsed = j_start.elapsed();
+    let jacobi_result = mat.jacobi(&b, &x0, eps, max_iter);
+    let seidel_result = mat.gauss_seidel(&b, &x0, eps, max_iter);
+    let gauss_result = mat.gaussian(&b)?;
+    let gauss_partial_pivot_result = mat.gaussian_partial_pivot(&b)?;
 
-    let s_start = Instant::now();
-    let seidel_res = mat.gauss_seidel(&b, &x0, eps, 100000);
-    let s_elapsed = s_start.elapsed();
+    Matrix::vec_to_file(&jacobi_result, "dump/jacobi_result.csv")?;
+    Matrix::vec_to_file(&seidel_result, "dump/seidel_result.csv")?;
+    Matrix::vec_to_file(&gauss_result, "dump/gauss_result.csv")?;
+    Matrix::vec_to_file(
+        &gauss_partial_pivot_result,
+        "dump/gauss_partial_pivot_result.csv",
+    )?;
 
-    let g_start = Instant::now();
-    let g_res = mat.gaussian(&b).unwrap();
-    let g_elapsed = g_start.elapsed();
+    Ok(())
+}
 
-    let gp_start = Instant::now();
-    let gp_res = mat.gaussian_partial_pivot(&b).unwrap();
-    let gp_elapsed = gp_start.elapsed();
+fn mc_compare(
+    n: usize,
+    eps: f64,
+    max_iter: usize,
+    mc_max_iter: usize,
+    starting_pos: usize,
+) -> Result<(), Box<dyn Error>> {
+    let mat = Matrix::init_default_path(n);
+    let mut b = vec![0f64; n];
+    b[0] = 1f64;
+    let x0 = vec![0f64; n];
 
-    println!("jacobi elapsed:          {:?} {:.6?}", j_elapsed, jacbi_res);
-    println!(
-        "seidel elapsed:          {:?} {:.6?}",
-        s_elapsed, seidel_res
-    );
-    println!(
-        "gauss without pivot elapsed:  {:?} {:.6?}",
-        g_elapsed, g_res
-    );
-    println!(
-        "gauss partial pivot elapsed:  {:?} {:.6?}",
-        gp_elapsed, gp_res
-    );
-    // println!("jacobi elapsed:          {:?}", j_elapsed);
-    // println!("seidel elapsed:          {:?}", s_elapsed);
-    // println!("gauss without pivot elapsed:          {:?}", g_elapsed);
-    // println!("gauss partial pivot elapsed:          {:?}", gp_elapsed);
+    let jacobi_result = mat.jacobi(&b, &x0, eps, max_iter)[starting_pos];
+    let seidel_result = mat.gauss_seidel(&b, &x0, eps, max_iter)[starting_pos];
+    let gauss_result = mat.gaussian(&b)?[starting_pos];
+    let gauss_partial_pivot_result = mat.gaussian_partial_pivot(&b)?[starting_pos];
+
+    let mc_result = monte_carlo::simulate_walk(n, starting_pos, mc_max_iter);
+
+    let out = format!("Monte carlo: {}\nJacobi: {}\nGauss-Seidel: {}\nGauss (no pivot): {}\nGauss (partial pivot): {}\n",
+        mc_result,
+        jacobi_result,
+        seidel_result,
+        gauss_result,
+        gauss_partial_pivot_result);
+
+    fs::write("dump/result_comparison.txt", out)?;
+
+    Ok(())
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("Nothing to do");
+        process::exit(0);
+    }
+
+    let n = 1000;
+    let eps = 1e-12;
+    let max_iter = 100_000;
+    let mc_max_iter = 10_000;
+    let starting_pos = n / 2;
+
+    match args[1].as_str() {
+        "dump" => {
+            if let Err(e) = dump_results(n, eps, max_iter) {
+                eprintln!("Test data dump failed: {}", e);
+            }
+        }
+        "compare" => {
+            if let Err(e) = mc_compare(n, eps, max_iter, mc_max_iter, starting_pos) {
+                eprintln!("Comparison dump failed: {}", e);
+            }
+        }
+        _ => eprintln!("Unrecognised optional argument"),
+    }
 }
