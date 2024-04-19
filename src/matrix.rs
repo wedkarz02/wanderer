@@ -1,8 +1,13 @@
+use std::error::Error;
+use std::{fs::File, io::Write};
+
 #[derive(Debug)]
 pub enum MatrixError {
     SizeError,
     ZeroPivotError,
 }
+
+impl Error for MatrixError {}
 
 impl std::fmt::Display for MatrixError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -55,6 +60,26 @@ impl Matrix {
         }
 
         out
+    }
+
+    pub fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>> {
+        let mut file = File::create(file_path)?;
+
+        for row in &self.rows {
+            let row_str: Vec<String> = row.iter().map(|x| x.to_string()).collect();
+            let row_csv = row_str.join(";") + "\n";
+            file.write_all(row_csv.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
+    pub fn vec_to_file(v: &Vec<f64>, file_path: &'static str) -> Result<(), Box<dyn Error>> {
+        let mut file = File::create(file_path)?;
+        let out: Vec<String> = v.iter().map(|x| x.to_string()).collect();
+        let out = out.join("\n");
+        file.write_all(out.as_bytes())?;
+        Ok(())
     }
 
     pub fn multiply(&self, other: &Self) -> Result<Self, MatrixError> {
