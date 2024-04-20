@@ -15,6 +15,7 @@ ref/
 
 # Temporary file for experiments
 asdf
+asdf.*
 
 # Computation results directory
 dump/
