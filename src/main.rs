@@ -1,11 +1,14 @@
+use base::*;
 use matrix::*;
 use std::{env, error::Error, fs, process};
 
+pub mod base;
 pub mod matrix;
 pub mod monte_carlo;
 
 fn dump_results(n: usize, eps: f64, max_iter: usize) -> Result<(), Box<dyn Error>> {
-    let mat = Matrix::init_default_path(n);
+    // let mat = Matrix::init_default_path(n);
+    let mat: Matrix = MatrixBase::init_default_path(n);
     let mut b = vec![0f64; n];
     b[0] = 1f64;
     let x0 = vec![0f64; n];
@@ -64,7 +67,7 @@ fn main() {
         process::exit(0);
     }
 
-    let n = 1000;
+    let n = 100;
     let eps = 1e-12;
     let max_iter = 100_000;
     let mc_max_iter = 10_000;

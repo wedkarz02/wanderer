@@ -1,22 +1,7 @@
 use std::error::Error;
 use std::{fs::File, io::Write};
 
-#[derive(Debug)]
-pub enum MatrixError {
-    SizeError,
-    ZeroPivotError,
-}
-
-impl Error for MatrixError {}
-
-impl std::fmt::Display for MatrixError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::SizeError => writeln!(f, "invalid matrix size"),
-            Self::ZeroPivotError => writeln!(f, "zero pivot - partial pivoting is required"),
-        }
-    }
-}
+use crate::base::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Matrix {
@@ -62,18 +47,6 @@ impl Matrix {
         out
     }
 
-    pub fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>> {
-        let mut file = File::create(file_path)?;
-
-        for row in &self.rows {
-            let row_str: Vec<String> = row.iter().map(|x| x.to_string()).collect();
-            let row_csv = row_str.join(";") + "\n";
-            file.write_all(row_csv.as_bytes())?;
-        }
-
-        Ok(())
-    }
-
     pub fn vec_to_file(v: &Vec<f64>, file_path: &'static str) -> Result<(), Box<dyn Error>> {
         let mut file = File::create(file_path)?;
         let out: Vec<String> = v.iter().map(|x| x.to_string()).collect();
@@ -104,9 +77,37 @@ impl Matrix {
     pub fn dot_product(x: &[f64], y: &[f64]) -> f64 {
         return x.iter().zip(y.iter()).map(|(&a, &b)| a * b).sum();
     }
+}
 
-    // https://en.wikipedia.org/wiki/Jacobi_method
-    pub fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+impl MatrixBase for Matrix {
+    fn init_default_path(size: usize) -> Self {
+        let mut out = Self::from_size(size, size);
+
+        out.rows[0][0] = 1f64;
+        out.rows[size - 1][size - 1] = 1f64;
+
+        for i in 1..size - 1 {
+            out.rows[i][i - 1] = -0.5;
+            out.rows[i][i] = 1f64;
+            out.rows[i][i + 1] = -0.5;
+        }
+
+        out
+    }
+
+    fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>> {
+        let mut file = File::create(file_path)?;
+
+        for row in &self.rows {
+            let row_str: Vec<String> = row.iter().map(|x| x.to_string()).collect();
+            let row_csv = row_str.join(";") + "\n";
+            file.write_all(row_csv.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
+    fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
         let mut x = x0.clone();
 
         for it in 0..max_iter {
@@ -132,8 +133,7 @@ impl Matrix {
         x
     }
 
-    // https://en.wikipedia.org/wiki/Gaussian_elimination
-    pub fn gaussian(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+    fn gaussian(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
         let mut a = self.clone();
         let mut b_new = b.clone();
 
@@ -184,12 +184,12 @@ impl Matrix {
         (a, b_new)
     }
 
-    pub fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+    fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
         let (a, b_new) = self.partial_pivot(b);
         return a.gaussian(&b_new);
     }
 
-    pub fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+    fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
         let mut x = x0.clone();
 
         for it in 0..max_iter {
