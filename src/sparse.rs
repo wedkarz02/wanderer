@@ -131,4 +131,43 @@ impl Sparse {
 
         Ok(out)
     }
+
+    pub fn partial_pivot(&self, b: &Vec<f64>) -> (Self, Vec<f64>) {
+        let mut a = self.clone();
+        let mut b_new = b.clone();
+
+        for i in 0..b_new.len() {
+            let mut max_row = i;
+            for k in (i + 1)..b_new.len() {
+                match (a.data.get(&(k, i)), a.data.get(&(max_row, i))) {
+                    (Some(&val), Some(&max_val)) => {
+                        if val.abs() > max_val.abs() {
+                            max_row = k;
+                        }
+                    }
+                    (Some(_), None) => max_row = k,
+                    _ => {}
+                }
+            }
+
+            if max_row != i {
+                for j in 0..b_new.len() {
+                    if let Some(&val) = a.data.get(&(i, j)) {
+                        a.data.insert((i, j), a.get_value(max_row, j));
+                        a.data.insert((max_row, j), val);
+                    } else if let Some(&max_val) = a.data.get(&(max_row, j)) {
+                        a.data.insert((i, j), max_val);
+                    }
+                }
+                b_new.swap(i, max_row);
+            }
+        }
+
+        (a, b_new)
+    }
+
+    pub fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+        let (a, b_new) = self.partial_pivot(b);
+        return a.gaussian(&b_new);
+    }
 }

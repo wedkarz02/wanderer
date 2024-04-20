@@ -22,6 +22,7 @@ fn dump_results(n: usize, eps: f64, max_iter: usize) -> Result<(), Box<dyn Error
     let gauss_result = mat.gaussian(&b)?;
     let gauss_sparse_result = sparse_mat.gaussian(&b)?;
     let gauss_partial_pivot_result = mat.gaussian_partial_pivot(&b)?;
+    let gpp_sparse_result = sparse_mat.gaussian_partial_pivot(&b)?;
 
     Matrix::vec_to_file(&jacobi_result, "dump/jacobi_result.csv")?;
     Matrix::vec_to_file(&jacobi_sparse_result, "dump/jacobi_sparse_result.csv")?;
@@ -32,6 +33,7 @@ fn dump_results(n: usize, eps: f64, max_iter: usize) -> Result<(), Box<dyn Error
         &gauss_partial_pivot_result,
         "dump/gauss_partial_pivot_result.csv",
     )?;
+    Matrix::vec_to_file(&gpp_sparse_result, "dump/gauss_pp_sparse_result.csv")?;
 
     Ok(())
 }
@@ -73,6 +75,10 @@ fn mc_compare(
     let gauss_partial_pivot_result = mat.gaussian_partial_pivot(&b)?[starting_pos];
     let gpp_elapsed = gpp_start.elapsed();
 
+    let gpp_sparse_start = Instant::now();
+    let gpp_sparse_result = sparse_mat.gaussian_partial_pivot(&b)?[starting_pos];
+    let gpp_sparse_elapsed = gpp_sparse_start.elapsed();
+
     let mc_start = Instant::now();
     let mc_result = monte_carlo::simulate_walk(n, starting_pos, mc_max_iter);
     let mc_elapsed = mc_start.elapsed();
@@ -84,7 +90,8 @@ fn mc_compare(
         Gauss-Seidel: {} in {:?}\n\
         Gauss (no pivot): {} in {:?}\n\
         Sparse Gauss (no pivot): {} in {:?}\n\
-        Gauss (partial pivot): {} in {:?}\n",
+        Gauss (partial pivot): {} in {:?}\n\
+        Sparse Gauss (partial pivot): {} in {:?}",
         mc_result,
         mc_elapsed,
         jacobi_result,
@@ -99,6 +106,8 @@ fn mc_compare(
         g_sparse_elapsed,
         gauss_partial_pivot_result,
         gpp_elapsed,
+        gpp_sparse_result,
+        gpp_sparse_elapsed
     );
 
     fs::write("dump/result_comparison.txt", out)?;
@@ -114,8 +123,8 @@ fn main() {
     }
 
     let n = 1000;
-    let eps = 1e-12;
-    let max_iter = 100_000;
+    let eps = 1e-6;
+    let max_iter = 1_000_000;
     let mc_max_iter = 10_000;
     let starting_pos = n / 2;
 
@@ -135,12 +144,30 @@ fn main() {
             let mut b = vec![0f64; n];
             b[0] = 1f64;
 
-            let mat: Matrix = MatrixBase::init_default_path(n);
+            let sparse = Sparse::init_default_path(n);
             let start = Instant::now();
-            let res = mat.gaussian(&b);
+            let res = sparse.gaussian_partial_pivot(&b);
             let time = start.elapsed();
 
             println!("{:?}\n{:#?}", time, res);
+        }
+        "sparse-jacobi" => {
+            let n = 1000;
+            let eps = 1e-16;
+            let max_iter = 100_000_000;
+            let starting_pos = n / 2;
+            let sparse = Sparse::init_default_path(n);
+            let mut b = vec![0f64; n];
+            b[0] = 1f64;
+            let x0 = vec![0f64; n];
+
+            let jacobi_sparse_start = Instant::now();
+            let jacobi_sparse_result = sparse.jacobi(&b, &x0, eps, max_iter)[starting_pos];
+            let jacobi_sparse_elapsed = jacobi_sparse_start.elapsed();
+            println!(
+                "Jacobi sparse: {} in {:?}",
+                jacobi_sparse_result, jacobi_sparse_elapsed
+            );
         }
         _ => eprintln!("Unrecognised optional argument"),
     }
