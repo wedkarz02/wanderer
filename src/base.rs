@@ -19,7 +19,6 @@ impl std::fmt::Display for MatrixError {
 
 pub trait MatrixBase {
     fn init_default_path(size: usize) -> Self;
-    fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>>;
     fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64>;
     fn gaussian(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError>;
     fn partial_pivot(&self, b: &Vec<f64>) -> (Self, Vec<f64>)

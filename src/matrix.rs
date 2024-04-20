@@ -32,19 +32,16 @@ impl Matrix {
         Self { rows: vec_matrix }
     }
 
-    pub fn init_default_path(size: usize) -> Self {
-        let mut out = Self::from_size(size, size);
+    pub fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>> {
+        let mut file = File::create(file_path)?;
 
-        out.rows[0][0] = 1f64;
-        out.rows[size - 1][size - 1] = 1f64;
-
-        for i in 1..size - 1 {
-            out.rows[i][i - 1] = -0.5;
-            out.rows[i][i] = 1f64;
-            out.rows[i][i + 1] = -0.5;
+        for row in &self.rows {
+            let row_str: Vec<String> = row.iter().map(|x| x.to_string()).collect();
+            let row_csv = row_str.join(";") + "\n";
+            file.write_all(row_csv.as_bytes())?;
         }
 
-        out
+        Ok(())
     }
 
     pub fn vec_to_file(v: &Vec<f64>, file_path: &'static str) -> Result<(), Box<dyn Error>> {
@@ -93,18 +90,6 @@ impl MatrixBase for Matrix {
         }
 
         out
-    }
-
-    fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>> {
-        let mut file = File::create(file_path)?;
-
-        for row in &self.rows {
-            let row_str: Vec<String> = row.iter().map(|x| x.to_string()).collect();
-            let row_csv = row_str.join(";") + "\n";
-            file.write_all(row_csv.as_bytes())?;
-        }
-
-        Ok(())
     }
 
     fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
