@@ -1,3 +1,4 @@
+use crate::base::*;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
@@ -39,6 +40,10 @@ impl Sparse {
         }
 
         sparse
+    }
+
+    pub fn get_value(&self, i: usize, j: usize) -> f64 {
+        *self.data.get(&(i, j)).unwrap_or(&0f64)
     }
 
     pub fn init_default_path(size: usize) -> Self {
@@ -87,5 +92,43 @@ impl Sparse {
         }
 
         x
+    }
+
+    pub fn gaussian(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+        let mut a = self.clone();
+        let mut b_new = b.clone();
+
+        for i in 0..b_new.len() {
+            let pivot = match a.data.get(&(i, i)) {
+                Some(&val) => val,
+                None => return Err(MatrixError::ZeroPivotError),
+            };
+
+            for j in (i + 1)..b_new.len() {
+                let factor = match a.data.get(&(j, i)) {
+                    Some(&val) => val / pivot,
+                    None => continue,
+                };
+
+                for k in i..b_new.len() {
+                    let entry = a.get_value(i, k);
+                    if let Some(val) = a.data.get_mut(&(j, k)) {
+                        *val -= factor * entry;
+                    }
+                }
+                b_new[j] -= factor * b_new[i];
+            }
+        }
+
+        let mut out = vec![0f64; b_new.len()];
+        for i in (0..b_new.len()).rev() {
+            out[i] = b_new[i];
+            for j in (i + 1)..b_new.len() {
+                out[i] -= a.get_value(i, j) * out[j];
+            }
+            out[i] /= a.get_value(i, i);
+        }
+
+        Ok(out)
     }
 }
