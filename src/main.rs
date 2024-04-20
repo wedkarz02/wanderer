@@ -1,10 +1,12 @@
 use base::*;
 use matrix::*;
+use sparse::*;
 use std::{env, error::Error, fs, process};
 
 pub mod base;
 pub mod matrix;
 pub mod monte_carlo;
+pub mod sparse;
 
 fn dump_results(n: usize, eps: f64, max_iter: usize) -> Result<(), Box<dyn Error>> {
     // let mat = Matrix::init_default_path(n);
@@ -83,6 +85,10 @@ fn main() {
             if let Err(e) = mc_compare(n, eps, max_iter, mc_max_iter, starting_pos) {
                 eprintln!("Comparison dump failed: {}", e);
             }
+        }
+        "sparse" => {
+            let sparse = Sparse::init_default_path(4);
+            println!("{}", sparse);
         }
         _ => eprintln!("Unrecognised optional argument"),
     }
