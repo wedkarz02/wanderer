@@ -55,4 +55,37 @@ impl Sparse {
 
         sparse
     }
+
+    pub fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+        let mut x = x0.clone();
+
+        for it in 0..max_iter {
+            let mut error = 0f64;
+            let x_temp = x.clone();
+            for i in 0..b.len() {
+                x[i] = b[i];
+            }
+
+            for (pos, val) in &self.data {
+                if pos.0 != pos.1 {
+                    x[pos.0] -= x_temp[pos.1] * val;
+                }
+            }
+
+            for (pos, val) in &self.data {
+                if pos.0 == pos.1 {
+                    x[pos.0] /= val;
+                }
+
+                error = error.max((x_temp[pos.0] - x[pos.0]).abs());
+            }
+
+            if error < eps {
+                println!("sparse jacobi breaking at: {} iterations", it);
+                break;
+            }
+        }
+
+        x
+    }
 }
