@@ -45,8 +45,10 @@ impl Sparse {
     pub fn get_value(&self, i: usize, j: usize) -> f64 {
         *self.data.get(&(i, j)).unwrap_or(&0f64)
     }
+}
 
-    pub fn init_default_path(size: usize) -> Self {
+impl MatrixBase for Sparse {
+    fn init_default_path(size: usize) -> Self {
         let mut sparse = Self::from_size(size);
 
         sparse.data.insert((0, 0), 1f64);
@@ -61,7 +63,9 @@ impl Sparse {
         sparse
     }
 
-    pub fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+    // This function is heavily inspired by demo C++ sparse implementation
+    // written by my lecturer dr. Łukasz Kuszner.
+    fn jacobi(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
         let mut x = x0.clone();
 
         for it in 0..max_iter {
@@ -94,7 +98,7 @@ impl Sparse {
         x
     }
 
-    pub fn gaussian(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+    fn gaussian(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
         let mut a = self.clone();
         let mut b_new = b.clone();
 
@@ -132,7 +136,7 @@ impl Sparse {
         Ok(out)
     }
 
-    pub fn partial_pivot(&self, b: &Vec<f64>) -> (Self, Vec<f64>) {
+    fn partial_pivot(&self, b: &Vec<f64>) -> (Self, Vec<f64>) {
         let mut a = self.clone();
         let mut b_new = b.clone();
 
@@ -166,8 +170,40 @@ impl Sparse {
         (a, b_new)
     }
 
-    pub fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+    fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
         let (a, b_new) = self.partial_pivot(b);
         return a.gaussian(&b_new);
+    }
+
+    fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+        let mut x = x0.clone();
+
+        // FIXME: (or maybe dont, i cant be bothered rn) This is ridiculously slow for some reason
+        //        590 seconds for 1k x 1k matrix, 1e-6 eps and 1mil max_iter
+
+        for it in 0..max_iter {
+            let mut x_new = vec![0.0; b.len()];
+            let mut error = 0f64;
+
+            for i in 0..b.len() {
+                for (pos, val) in &self.data {
+                    if pos.0 != pos.1 && pos.0 == i {
+                        x_new[pos.0] += val * if pos.1 < i { x_new[pos.1] } else { x[pos.1] };
+                    }
+                }
+
+                x_new[i] = (b[i] - x_new[i]) / self.get_value(i, i);
+                error = error.max((x_new[i] - x[i]).abs());
+            }
+
+            if error < eps {
+                println!("Gauss-Seidel breaking at: {} iterations", it);
+                break;
+            }
+
+            x = x_new;
+        }
+
+        x
     }
 }
