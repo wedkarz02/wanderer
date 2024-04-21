@@ -242,9 +242,13 @@ fn main() {
             let set = parse_config("default.config");
             let config = Config::build(set);
 
-            let (mat, b) = Matrix::from_config(&config);
-            println!("{}\n{:?}", mat, b);
-            let res = mat.gaussian(&b).unwrap();
+            // let (mat, b) = Matrix::from_config(&config);
+            // println!("{}\n{:?}", mat, b);
+            // let res = mat.gaussian(&b).unwrap();
+            // println!("res: {:?}", res);
+            let (sparse, b) = Sparse::from_config(&config);
+            println!("{}\n{:?}", sparse, b);
+            let res = sparse.gaussian(&b).unwrap();
             println!("res: {:?}", res);
         }
         "dump" => {

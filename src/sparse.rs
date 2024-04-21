@@ -1,4 +1,5 @@
 use crate::base::*;
+use crate::Config;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
@@ -40,6 +41,60 @@ impl Sparse {
         }
 
         sparse
+    }
+
+    pub fn from_config(cfg: &Config) -> (Self, Vec<f64>) {
+        let n = cfg.inters.len();
+        let mut out = Self::from_size(n);
+        let mut b = vec![0f64; n];
+
+        for i in 0..n {
+            out.data.insert((i, i), 1f64);
+            if cfg.inters[i].exit {
+                b[i] = 1f64;
+            }
+        }
+
+        for i in 0..n {
+            if cfg.inters[i].exit || cfg.inters[i].well {
+                continue;
+            }
+
+            let mut alley_ctr = 0f64;
+            for alley in &cfg.alleys {
+                if cfg.inters[i].id == alley.a.id || cfg.inters[i].id == alley.b.id {
+                    alley_ctr += 1f64;
+                }
+            }
+
+            for alley in &cfg.alleys {
+                if cfg.inters[i].id == alley.a.id {
+                    let value = if !cfg.deadends.contains(&alley.a.id) {
+                        let mut tmp = -alley.get_propability() / alley_ctr;
+                        if alley.b.trashcan {
+                            tmp /= 2f64;
+                        }
+                        tmp
+                    } else {
+                        1f64
+                    };
+                    out.data.insert((i, alley.b.id - 1), value);
+                } else if cfg.inters[i].id == alley.b.id {
+                    let value = if !cfg.deadends.contains(&alley.b.id) {
+                        let mut tmp = -alley.get_propability() / alley_ctr;
+                        if alley.a.trashcan {
+                            tmp /= 2f64;
+                        }
+                        tmp
+                    } else {
+                        1f64
+                    };
+                    out.data.insert((i, alley.a.id - 1), value);
+                }
+            }
+        }
+
+        (out, b)
     }
 
     pub fn get_value(&self, i: usize, j: usize) -> f64 {
