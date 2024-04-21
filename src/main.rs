@@ -1,5 +1,6 @@
 use base::*;
 use comparisons::*;
+use matrix::Matrix;
 use sparse::*;
 use std::io::{BufRead, BufReader};
 use std::time::Instant;
@@ -10,6 +11,9 @@ pub mod comparisons;
 pub mod matrix;
 pub mod monte_carlo;
 pub mod sparse;
+
+#[derive(Debug)]
+pub struct Sets(Vec<Vec<Vec<usize>>>);
 
 #[derive(Debug, Clone)]
 pub struct Intersection {
@@ -43,15 +47,24 @@ impl Alley {
     pub fn new(a: Intersection, b: Intersection, length: usize) -> Self {
         Self { a, b, length }
     }
+
+    pub fn get_propability(&self) -> f64 {
+        let matrix_length = self.length + 2;
+        let starting_pos = matrix_length - 2;
+        1f64 - (starting_pos as f64 / (matrix_length - 1) as f64)
+    }
 }
 
 #[derive(Debug)]
 pub struct Config {
     pub inters: Vec<Intersection>,
     pub alleys: Vec<Alley>,
+    pub deadends: Vec<usize>,
 }
 
 impl Config {
+    // This is not at all resistant to incorrect config file and will panic
+    // left and right. It's not that important right now but should be fixed later.
     pub fn build(sets: Sets) -> Self {
         let inters_count = sets.0[0][0][0];
         let alleys_count = sets.0[0][0][1];
@@ -84,6 +97,14 @@ impl Config {
             }
         }
 
+        for i in 1..sets.0[1][3].len() {
+            for inter in &mut inters {
+                if inter.id == sets.0[1][3][i] {
+                    inter.trashcan = true;
+                }
+            }
+        }
+
         let mut alleys = Vec::new();
         for i in 1..alleys_count + 1 {
             let a_id = sets.0[0][i][0];
@@ -102,11 +123,45 @@ impl Config {
             alleys.push(Alley::new(a, b, length));
         }
 
-        Self { inters, alleys }
+        let mut dead_ends: Vec<usize> = Vec::new();
+        let mut not_dead_ends: Vec<usize> = Vec::new();
+
+        for alley in &alleys {
+            if !not_dead_ends.contains(&alley.a.id) {
+                if dead_ends.contains(&alley.a.id) {
+                    not_dead_ends.push(alley.a.id);
+                    for i in 0..dead_ends.len() {
+                        if dead_ends[i] == alley.a.id {
+                            dead_ends.remove(i);
+                            break;
+                        }
+                    }
+                } else {
+                    dead_ends.push(alley.a.id);
+                }
+            }
+            if !not_dead_ends.contains(&alley.b.id) {
+                if dead_ends.contains(&alley.b.id) {
+                    not_dead_ends.push(alley.b.id);
+                    for i in 0..dead_ends.len() {
+                        if dead_ends[i] == alley.b.id {
+                            dead_ends.remove(i);
+                            break;
+                        }
+                    }
+                } else {
+                    dead_ends.push(alley.b.id);
+                }
+            }
+        }
+
+        Self {
+            inters,
+            alleys,
+            deadends: dead_ends,
+        }
     }
 }
-
-pub struct Sets(Vec<Vec<Vec<usize>>>);
 
 fn parse_config(file_name: &'static str) -> Sets {
     let file = fs::File::open(file_name).expect("failed to open the file");
@@ -151,10 +206,46 @@ fn main() {
     let starting_pos = n / 2;
 
     match args[1].as_str() {
+        "fdsa" => {
+            let mat = Matrix::from_vecs(vec![
+                vec![1.0, 0.0, 0.0, 0.0],
+                vec![0.0, 1.0, 0.0, 0.0],
+                vec![-0.0473, -0.0666, 1.0, -0.0666],
+                vec![1.0, 0.0, 0.0, 1.0],
+            ]);
+            let b = vec![0.0, 1.0, 0.0, 1.0];
+            let res = mat.gaussian(&b).unwrap();
+            println!("{:?}", res);
+        }
+        "asdf" => {
+            let n = 4;
+            let start = n - 2;
+            let max_iter = 1000;
+            let mc_res = monte_carlo::simulate_walk(n, start, max_iter);
+            println!("mc: {}", mc_res);
+
+            let sparse: Sparse = MatrixBase::init_default_path(n);
+            let mut b = vec![0f64; n];
+            b[0] = 1f64;
+            let gauss_res = sparse.gaussian(&b).unwrap();
+            println!("gauss: {:?}", gauss_res);
+
+            let alley = Alley::new(
+                Intersection::new(1, false, false, false, false),
+                Intersection::new(2, false, false, false, false),
+                n - 2,
+            );
+
+            println!("alley: {}", alley.get_propability());
+        }
         "read" => {
-            let set = parse_config(".config");
+            let set = parse_config("default.config");
             let config = Config::build(set);
-            println!("{:#?}", config);
+
+            let (mat, b) = Matrix::from_config(&config);
+            println!("{}\n{:?}", mat, b);
+            let res = mat.gaussian(&b).unwrap();
+            println!("res: {:?}", res);
         }
         "dump" => {
             if let Err(e) = dump_results(n, eps, max_iter) {

@@ -2,6 +2,7 @@ use std::error::Error;
 use std::{fs::File, io::Write};
 
 use crate::base::*;
+use crate::Config;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Matrix {
@@ -30,6 +31,58 @@ impl Matrix {
 
     pub fn from_vecs(vec_matrix: Vec<Vec<f64>>) -> Self {
         Self { rows: vec_matrix }
+    }
+
+    pub fn from_config(cfg: &Config) -> (Self, Vec<f64>) {
+        let n = cfg.inters.len();
+        let mut out = Self::from_size(n, n);
+        let mut b = vec![0f64; n];
+
+        for i in 0..n {
+            out.rows[i][i] = 1f64;
+            if cfg.inters[i].exit {
+                b[i] = 1f64;
+            }
+        }
+
+        for i in 0..n {
+            if cfg.inters[i].exit || cfg.inters[i].well {
+                continue;
+            }
+
+            let mut alley_ctr = 0f64;
+            for alley in &cfg.alleys {
+                if cfg.inters[i].id == alley.a.id || cfg.inters[i].id == alley.b.id {
+                    alley_ctr += 1f64;
+                }
+            }
+
+            for alley in &cfg.alleys {
+                if cfg.inters[i].id == alley.a.id {
+                    out.rows[i][alley.b.id - 1] = if !cfg.deadends.contains(&alley.a.id) {
+                        let mut tmp = -alley.get_propability() / alley_ctr;
+                        if alley.b.trashcan {
+                            tmp /= 2f64;
+                        }
+                        tmp
+                    } else {
+                        1f64
+                    };
+                } else if cfg.inters[i].id == alley.b.id {
+                    out.rows[i][alley.a.id - 1] = if !cfg.deadends.contains(&alley.b.id) {
+                        let mut tmp = -alley.get_propability() / alley_ctr;
+                        if alley.a.trashcan {
+                            tmp /= 2f64;
+                        }
+                        tmp
+                    } else {
+                        1f64
+                    };
+                }
+            }
+        }
+
+        (out, b)
     }
 
     pub fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>> {
