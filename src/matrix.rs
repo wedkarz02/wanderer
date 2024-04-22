@@ -224,7 +224,10 @@ impl MatrixBase for Matrix {
 
     fn gaussian_partial_pivot(&self, b: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
         let (a, b_new) = self.partial_pivot(b);
-        return a.gaussian(&b_new);
+        match a.gaussian(&b_new) {
+            Ok(values) => Ok(values),
+            Err(_) => Err(MatrixError::Unsolvable),
+        }
     }
 
     fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {

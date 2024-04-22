@@ -2,6 +2,9 @@ use std::io::{BufRead, BufReader};
 use std::process::Command;
 use std::{env, fs, process};
 
+use base::*;
+use matrix::*;
+
 pub mod base;
 pub mod comparisons;
 pub mod matrix;
@@ -188,27 +191,47 @@ pub fn parse_config(file_name: &'static str) -> Sets {
     Sets(data_sets)
 }
 
+pub fn gen_config(inter_count: usize, alley_count: usize) -> Result<(), std::io::Error> {
+    let py_output = Command::new("python3")
+        .arg("scripts/gen_config.py")
+        .arg(inter_count.to_string())
+        .arg(alley_count.to_string())
+        .output()
+        .expect("failed to execute python process");
+
+    if py_output.status.success() {
+        let result = String::from_utf8_lossy(&py_output.stdout);
+        fs::write("tmp.config", result.to_string())
+    } else {
+        let error = String::from_utf8_lossy(&py_output.stderr);
+        eprintln!("{}", error);
+        Ok(())
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
+    if args.len() != 2 {
         println!("Nothing to do");
         process::exit(0);
     }
 
     match args[1].as_str() {
         "read" => {
-            // let set = parse_config(".config");
-            // let config = Config::build(set);
-
-            // let (mat, b) = Matrix::from_config(&config);
-            // // let (sparse, b) = Sparse::from_config(&config);
-            // // println!("{}\n{:?}", sparse, b);
-            // // let res = sparse.gaussian(&b).unwrap();
-            // let res = mat.gauss_seidel(&b, &vec![0f64; b.len()], 1e-16, 1_000_000);
-            // println!("res: {:?}", res);
+            let set = parse_config("tmp.config");
+            let config = Config::build(set);
+            let (mat, b) = Matrix::from_config(&config);
+            let res = match mat.gaussian_partial_pivot(&b) {
+                Ok(val) => val,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+            println!("res: {:?}", res);
         }
-        "compare" => {
-            // comparisons::incremental_compare();
+        "compare-default" => {
+            comparisons::incremental_compare();
 
             let py_output = Command::new("python3")
                 .arg("scripts/plot_default_cmps.py")
@@ -223,6 +246,13 @@ fn main() {
                 eprintln!("{}", error);
             }
         }
+        "gen-config" => {
+            if let Err(e) = gen_config(100, 100) {
+                eprintln!("{}", e);
+                process::exit(0);
+            }
+        }
+        "verify" => {}
         _ => eprintln!("Unrecognised optional argument"),
     }
 }

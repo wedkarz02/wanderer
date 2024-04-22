@@ -186,6 +186,9 @@ impl MatrixBase for Sparse {
                 out[i] -= a.get_value(i, j) * out[j];
             }
             out[i] /= a.get_value(i, i);
+            if out[i].is_nan() {
+                return Err(MatrixError::Unsolvable);
+            }
         }
 
         Ok(out)
@@ -233,7 +236,7 @@ impl MatrixBase for Sparse {
     fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
         let mut x = x0.clone();
 
-        // FIXME: (or maybe dont, i cant be bothered rn) This is ridiculously slow for some reason
+        // FIXME: This is ridiculously slow for some reason
         //        590 seconds for 1k x 1k matrix, 1e-6 eps and 1mil max_iter
 
         for it in 0..max_iter {

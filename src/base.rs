@@ -4,6 +4,7 @@ use std::error::Error;
 pub enum MatrixError {
     SizeError,
     ZeroPivotError,
+    Unsolvable,
 }
 
 impl Error for MatrixError {}
@@ -13,6 +14,7 @@ impl std::fmt::Display for MatrixError {
         match self {
             Self::SizeError => writeln!(f, "invalid matrix size"),
             Self::ZeroPivotError => writeln!(f, "zero pivot - partial pivoting is required"),
+            Self::Unsolvable => writeln!(f, "unsolvable matrix"),
         }
     }
 }
