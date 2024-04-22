@@ -1,9 +1,4 @@
-use base::*;
-use comparisons::*;
-use matrix::Matrix;
-use sparse::*;
 use std::io::{BufRead, BufReader};
-use std::time::Instant;
 use std::{env, fs, process};
 
 pub mod base;
@@ -163,7 +158,7 @@ impl Config {
     }
 }
 
-fn parse_config(file_name: &'static str) -> Sets {
+pub fn parse_config(file_name: &'static str) -> Sets {
     let file = fs::File::open(file_name).expect("failed to open the file");
     let reader = BufReader::new(file);
 
@@ -199,117 +194,20 @@ fn main() {
         process::exit(0);
     }
 
-    let n = 1000;
-    let eps = 1e-6;
-    let max_iter = 1_000_000;
-    let mc_max_iter = 10_000;
-    let starting_pos = n / 2;
-
     match args[1].as_str() {
-        "fdsa" => {
-            let mat = Matrix::from_vecs(vec![
-                vec![1.0, 0.0, 0.0, 0.0],
-                vec![0.0, 1.0, 0.0, 0.0],
-                vec![-0.0473, -0.0666, 1.0, -0.0666],
-                vec![1.0, 0.0, 0.0, 1.0],
-            ]);
-            let b = vec![0.0, 1.0, 0.0, 1.0];
-            let res = mat.gaussian(&b).unwrap();
-            println!("{:?}", res);
-        }
-        "asdf" => {
-            let n = 4;
-            let start = n - 2;
-            let max_iter = 1000;
-            let mc_res = monte_carlo::simulate_walk(n, start, max_iter);
-            println!("mc: {}", mc_res);
-
-            let sparse: Sparse = MatrixBase::init_default_path(n);
-            let mut b = vec![0f64; n];
-            b[0] = 1f64;
-            let gauss_res = sparse.gaussian(&b).unwrap();
-            println!("gauss: {:?}", gauss_res);
-
-            let alley = Alley::new(
-                Intersection::new(1, false, false, false, false),
-                Intersection::new(2, false, false, false, false),
-                n - 2,
-            );
-
-            println!("alley: {}", alley.get_propability());
-        }
         "read" => {
-            let set = parse_config("default.config");
-            let config = Config::build(set);
+            // let set = parse_config(".config");
+            // let config = Config::build(set);
 
             // let (mat, b) = Matrix::from_config(&config);
-            // println!("{}\n{:?}", mat, b);
-            // let res = mat.gaussian(&b).unwrap();
+            // // let (sparse, b) = Sparse::from_config(&config);
+            // // println!("{}\n{:?}", sparse, b);
+            // // let res = sparse.gaussian(&b).unwrap();
+            // let res = mat.gauss_seidel(&b, &vec![0f64; b.len()], 1e-16, 1_000_000);
             // println!("res: {:?}", res);
-            let (sparse, b) = Sparse::from_config(&config);
-            println!("{}\n{:?}", sparse, b);
-            let res = sparse.gaussian(&b).unwrap();
-            println!("res: {:?}", res);
-        }
-        "dump" => {
-            if let Err(e) = dump_results(n, eps, max_iter) {
-                eprintln!("Test data dump failed: {}", e);
-            }
         }
         "compare" => {
-            if let Err(e) = mc_compare(n, eps, max_iter, mc_max_iter, starting_pos) {
-                eprintln!("Comparison dump failed: {}", e);
-            }
-        }
-        "sparse" => {
-            let n = 1000;
-            let mut b = vec![0f64; n];
-            b[0] = 1f64;
-
-            let sparse = Sparse::init_default_path(n);
-            let start = Instant::now();
-            let res = sparse.gaussian_partial_pivot(&b);
-            let time = start.elapsed();
-
-            println!("{:?}\n{:#?}", time, res);
-        }
-        "sparse-jacobi" => {
-            let n = 1000;
-            let eps = 1e-16;
-            let max_iter = 100_000_000;
-            let starting_pos = n / 2;
-            let sparse = Sparse::init_default_path(n);
-            let mut b = vec![0f64; n];
-            b[0] = 1f64;
-            let x0 = vec![0f64; n];
-
-            let jacobi_sparse_start = Instant::now();
-            let jacobi_sparse_result = sparse.jacobi(&b, &x0, eps, max_iter)[starting_pos];
-            let jacobi_sparse_elapsed = jacobi_sparse_start.elapsed();
-            println!(
-                "Jacobi sparse: {} in {:?}",
-                jacobi_sparse_result, jacobi_sparse_elapsed
-            );
-        }
-        "sparse-seidel" => {
-            let n = 100;
-            let eps = 1e-6;
-            let max_iter = 1_000_000;
-            let starting_pos = n / 2;
-            let sparse = Sparse::init_default_path(n);
-            // let mat = Matrix::init_default_path(n);
-            let mut b = vec![0f64; n];
-            b[0] = 1f64;
-            let x0 = vec![0f64; n];
-
-            let seidel_sparse_start = Instant::now();
-            let seidel_sparse_result = sparse.gauss_seidel(&b, &x0, eps, max_iter)[starting_pos];
-            // let seidel_sparse_result = mat.gauss_seidel(&b, &x0, eps, max_iter)[starting_pos];
-            let seidel_sparse_elapsed = seidel_sparse_start.elapsed();
-            println!(
-                "seidel sparse: {:?} in {:?}",
-                seidel_sparse_result, seidel_sparse_elapsed
-            );
+            comparisons::incremental_compare();
         }
         _ => eprintln!("Unrecognised optional argument"),
     }

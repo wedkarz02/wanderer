@@ -13,9 +13,6 @@ target/
 # Reference files
 ref/
 
-# Temporary file for experiments
+# Temporary files for experiments
 asdf
 asdf.*
-
-# Computation results directory
-dump/
