@@ -60,6 +60,7 @@ pub struct Config {
     pub inters: Vec<Intersection>,
     pub alleys: Vec<Alley>,
     pub deadends: Vec<usize>,
+    pub starting_pos: usize,
 }
 
 impl Config {
@@ -90,10 +91,12 @@ impl Config {
             }
         }
 
+        let mut starting_pos = 0;
         let start = sets.0[1][2][1];
         for inter in &mut inters {
             if inter.id == start {
                 inter.start = true;
+                starting_pos = inter.id - 1;
             }
         }
 
@@ -159,6 +162,7 @@ impl Config {
             inters,
             alleys,
             deadends: dead_ends,
+            starting_pos,
         }
     }
 }
@@ -231,8 +235,16 @@ fn main() {
             };
             println!("res: {:?}", res);
         }
+        "compare-config" => {
+            let sets = parse_config("default.config");
+            let config = Config::build(sets);
+            if let Err(e) = comparisons::compare_config(&config) {
+                eprintln!("{}", e);
+                process::exit(0);
+            }
+        }
         "compare-default" => {
-            comparisons::incremental_compare();
+            comparisons::incremental_compare_default();
 
             let py_output = Command::new("python3")
                 .arg("scripts/plot_default_cmps.py")
