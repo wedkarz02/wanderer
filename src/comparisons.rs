@@ -225,6 +225,6 @@ pub fn incremental_compare() {
 
     fs::write("dump/default_no_sparse_time.csv", ns_row_str).unwrap();
     fs::write("dump/default_no_sparse_results.csv", ns_res_str).unwrap();
-    fs::write("dump/default__sparse_time.csv", s_row_str).unwrap();
-    fs::write("dump/default__sparse_results.csv", s_res_str).unwrap();
+    fs::write("dump/default_sparse_time.csv", s_row_str).unwrap();
+    fs::write("dump/default_sparse_results.csv", s_res_str).unwrap();
 }

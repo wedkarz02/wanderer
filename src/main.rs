@@ -1,4 +1,5 @@
 use std::io::{BufRead, BufReader};
+use std::process::Command;
 use std::{env, fs, process};
 
 pub mod base;
@@ -207,7 +208,20 @@ fn main() {
             // println!("res: {:?}", res);
         }
         "compare" => {
-            comparisons::incremental_compare();
+            // comparisons::incremental_compare();
+
+            let py_output = Command::new("python3")
+                .arg("scripts/plot_default_cmps.py")
+                .output()
+                .expect("failed to execute python process");
+
+            if py_output.status.success() {
+                let result = String::from_utf8_lossy(&py_output.stdout);
+                println!("{}", result);
+            } else {
+                let error = String::from_utf8_lossy(&py_output.stderr);
+                eprintln!("{}", error);
+            }
         }
         _ => eprintln!("Unrecognised optional argument"),
     }
