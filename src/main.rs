@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::process::Command;
 use std::{env, fs, process};
@@ -218,8 +219,8 @@ fn main() {
 
     match args[1].as_str() {
         "read" => {
-            let set = parse_config("tmp.config");
-            let config = Config::build(set);
+            let sets = parse_config("tmp.config");
+            let config = Config::build(sets);
             let (mat, b) = Matrix::from_config(&config);
             let res = match mat.gaussian_partial_pivot(&b) {
                 Ok(val) => val,
@@ -252,7 +253,32 @@ fn main() {
                 process::exit(0);
             }
         }
-        "verify" => {}
+        "verify" => {
+            let sets = parse_config(".config");
+            let config = Config::build(sets);
+
+            let mut map: HashMap<usize, f64> = HashMap::new();
+
+            for alley in &config.alleys {
+                map.insert(alley.length, alley.get_propability());
+            }
+
+            let max_iter = 10_000;
+            let eps = 1e-2;
+
+            for entry in map {
+                let n = entry.0 + 2;
+                let start = n - 2;
+                let mc_result = monte_carlo::simulate_walk(n, start, max_iter);
+
+                println!("built: {}\nmc: {}", entry.1, mc_result);
+                if (entry.1 - mc_result).abs() > eps {
+                    println!("Failed.\n");
+                } else {
+                    println!("Succeeded.\n");
+                }
+            }
+        }
         _ => eprintln!("Unrecognised optional argument"),
     }
 }
