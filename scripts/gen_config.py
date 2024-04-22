@@ -19,7 +19,7 @@ for _ in range(1, alleys_count+1):
     if repeat:
         idx = random.randint(1, inter_count)
     else:
-        if idx >= inter_count:
+        if idx > inter_count:
             repeat = True
             idx = random.randint(1, inter_count)
 

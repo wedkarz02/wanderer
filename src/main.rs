@@ -36,7 +36,7 @@ impl Intersection {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Alley {
     pub a: Intersection,
     pub b: Intersection,
@@ -55,7 +55,7 @@ impl Alley {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub inters: Vec<Intersection>,
     pub alleys: Vec<Alley>,
@@ -236,12 +236,16 @@ fn main() {
             println!("res: {:?}", res);
         }
         "compare-config" => {
-            let sets = parse_config("default.config");
+            let sets = parse_config("tmp.config");
             let config = Config::build(sets);
-            if let Err(e) = comparisons::compare_config(&config) {
+            if let Err(e) = comparisons::incremental_compare_config(1, Some(&config)) {
                 eprintln!("{}", e);
                 process::exit(0);
             }
+            // if let Err(e) = comparisons::incremental_compare_config(100, None) {
+            //     eprintln!("{}", e);
+            //     process::exit(0);
+            // }
         }
         "compare-default" => {
             comparisons::incremental_compare_default();
@@ -260,7 +264,7 @@ fn main() {
             }
         }
         "gen-config" => {
-            if let Err(e) = gen_config(100, 100) {
+            if let Err(e) = gen_config(1000, 1000) {
                 eprintln!("{}", e);
                 process::exit(0);
             }
@@ -289,6 +293,12 @@ fn main() {
                 } else {
                     println!("Succeeded.\n");
                 }
+            }
+        }
+        "asdf" => {
+            let n = 2;
+            for i in (10..=n * 10).step_by(10) {
+                println!("{}", i);
             }
         }
         _ => eprintln!("Unrecognised optional argument"),

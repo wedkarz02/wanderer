@@ -5,13 +5,14 @@ use crate::Config;
 
 use std::{error::Error, fs, time::Instant};
 
-pub fn compare_config(cfg: &Config) -> Result<(), MatrixError> {
+pub fn compare_config(
+    cfg: &Config,
+    eps: f64,
+    max_iter: usize,
+) -> Result<(String, String, String, String), MatrixError> {
     let (mat, b) = Matrix::from_config(cfg);
     let (sparse, _) = Sparse::from_config(cfg);
-
     let x0 = vec![0f64; b.len()];
-    let max_iter = 100_000;
-    let eps = 1e-16;
 
     let gpp_start = Instant::now();
     let gpp_result = mat.gaussian_partial_pivot(&b);
@@ -68,50 +69,111 @@ pub fn compare_config(cfg: &Config) -> Result<(), MatrixError> {
         Err(e) => return Err(e),
     };
 
-    let mut results_ns = Vec::new();
-    let mut times_ns = Vec::new();
-    results_ns.push(String::from("jacobi;seidel;gauss;gauss_pivot"));
-    times_ns.push(String::from("jacobi;seidel;gauss;gauss_pivot"));
-    let res_line = format!(
-        "{};{};{};{}",
+    let res_ns_line = format!(
+        "{};{};{};{};{}",
+        b.len(),
         jacobi_res[cfg.starting_pos],
         seidel_res[cfg.starting_pos],
         gauss_res[cfg.starting_pos],
         gpp_result[cfg.starting_pos],
     );
-    let time_line = format!(
-        "{};{};{};{}",
-        jacobi_elapsed, seidel_elapsed, gauss_elapsed, gpp_elapsed
+    let time_ns_line = format!(
+        "{};{};{};{};{}",
+        b.len(),
+        jacobi_elapsed,
+        seidel_elapsed,
+        gauss_elapsed,
+        gpp_elapsed
     );
-    results_ns.push(res_line);
-    times_ns.push(time_line);
 
-    let mut results_s = Vec::new();
-    let mut times_s = Vec::new();
-    results_s.push(String::from("jacobi;gauss;gauss_pivot"));
-    times_s.push(String::from("jacobi;gauss;gauss_pivot"));
-    let res_line = format!(
-        "{};{};{}",
+    let res_s_line = format!(
+        "{};{};{};{}",
+        b.len(),
         jacobi_sparse_res[cfg.starting_pos],
         gauss_sparse_res[cfg.starting_pos],
         gpp_sparse_res[cfg.starting_pos]
     );
-    let time_line = format!(
-        "{};{};{}",
-        jacobi_sparse_elapsed, gauss_sparse_elapsed, gpp_sparse_elapsed
+    let time_s_line = format!(
+        "{};{};{};{}",
+        b.len(),
+        jacobi_sparse_elapsed,
+        gauss_sparse_elapsed,
+        gpp_sparse_elapsed
     );
-    results_s.push(res_line);
-    times_s.push(time_line);
+
+    Ok((res_ns_line, time_ns_line, res_s_line, time_s_line))
+}
+
+pub fn incremental_compare_config(n: usize, cfg: Option<&Config>) -> Result<(), Box<dyn Error>> {
+    let mut results_ns = Vec::new();
+    let mut times_ns = Vec::new();
+    let mut results_s = Vec::new();
+    let mut times_s = Vec::new();
+
+    results_ns.push(String::from("n;jacobi;seidel;gauss;gauss_pivot"));
+    times_ns.push(String::from("n;jacobi;seidel;gauss;gauss_pivot"));
+    results_s.push(String::from("n;jacobi;gauss;gauss_pivot"));
+    times_s.push(String::from("n;jacobi;gauss;gauss_pivot"));
+
+    let eps = 1e-16;
+    let max_iter = 1_000_000;
+
+    let mut res_ns_line;
+    let mut time_ns_line;
+    let mut res_s_line;
+    let mut time_s_line;
+
+    for i in (10..=n * 10).step_by(10) {
+        loop {
+            let config = match cfg {
+                Some(c) => c.clone(),
+                None => {
+                    let mut tmp_gauss: Result<Vec<f64>, MatrixError> = Err(MatrixError::Unsolvable);
+                    while let Err(_) = tmp_gauss {
+                        crate::gen_config(i, (3 * i) / 2)?;
+                        let sets = crate::parse_config("tmp.config");
+                        let config = Config::build(sets);
+                        let (sparse, b) = Sparse::from_config(&config);
+                        tmp_gauss = sparse.gaussian(&b);
+                    }
+                    let sets = crate::parse_config("tmp.config");
+                    Config::build(sets).clone()
+                }
+            };
+
+            (res_ns_line, time_ns_line, res_s_line, time_s_line) =
+                compare_config(&config, eps, max_iter)?;
+
+            if !res_ns_line.contains("-") || !res_s_line.contains("-") {
+                break;
+            }
+        }
+
+        results_ns.push(res_ns_line);
+        times_ns.push(time_ns_line);
+        results_s.push(res_s_line);
+        times_s.push(time_s_line);
+    }
 
     let results_ns_str = results_ns.join("\n");
     let times_ns_str = times_ns.join("\n");
     let results_s_str = results_s.join("\n");
     let times_s_str = times_s.join("\n");
 
-    fs::write("dump/config_res_no_sparse.csv", results_ns_str).unwrap();
-    fs::write("dump/config_time_no_sparse.csv", times_ns_str).unwrap();
-    fs::write("dump/config_res_sparse.csv", results_s_str).unwrap();
-    fs::write("dump/config_time_sparse.csv", times_s_str).unwrap();
+    match cfg {
+        Some(_) => {
+            fs::write("dump/single_config_res_no_sparse.csv", results_ns_str)?;
+            fs::write("dump/single_config_time_no_sparse.csv", times_ns_str)?;
+            fs::write("dump/single_config_res_sparse.csv", results_s_str)?;
+            fs::write("dump/single_config_time_sparse.csv", times_s_str)?;
+        }
+        None => {
+            fs::write("dump/config_res_no_sparse.csv", results_ns_str)?;
+            fs::write("dump/config_time_no_sparse.csv", times_ns_str)?;
+            fs::write("dump/config_res_sparse.csv", results_s_str)?;
+            fs::write("dump/config_time_sparse.csv", times_s_str)?;
+        }
+    }
 
     Ok(())
 }
@@ -202,10 +264,11 @@ pub fn incremental_compare_default() {
     s_row_lines.push(String::from("n;jacobi;gauss;gauss_pivot"));
     s_res_lines.push(String::from("n;jacobi;gauss;gauss_pivot"));
 
+    let eps = 1e-16;
+    let max_iter = 1_000_000;
+
     for n in (10..=300).step_by(10) {
         let starting_pos = n / 2;
-        let eps = 1e-16;
-        let max_iter = 1_000_000;
 
         let (ns_row, ns_res, s_row, s_res) =
             compare_default(n, eps, max_iter, starting_pos).unwrap();
