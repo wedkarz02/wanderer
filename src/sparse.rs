@@ -97,6 +97,18 @@ impl Sparse {
         (out, b)
     }
 
+    pub fn multiply_by_vec(&self, other: &Vec<f64>) -> Vec<f64> {
+        let mut out = vec![0f64; other.len()];
+
+        for i in 0..other.len() {
+            for j in 0..other.len() {
+                out[i] += self.get_value(i, j) * other[j];
+            }
+        }
+
+        out
+    }
+
     pub fn get_value(&self, i: usize, j: usize) -> f64 {
         *self.data.get(&(i, j)).unwrap_or(&0f64)
     }
@@ -263,5 +275,22 @@ impl MatrixBase for Sparse {
         }
 
         x
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sparse_mul_vec() {
+        let a = Sparse::from_vecs(vec![
+            vec![1.0, 2.0, 1.0],
+            vec![2.0, 1.0, 1.0],
+            vec![1.0, 3.0, 1.0],
+        ]);
+        let b = vec![1.0, 0.0, 0.0];
+        let expected = vec![1.0, 2.0, 1.0];
+        assert_eq!(expected, a.multiply_by_vec(&b));
     }
 }

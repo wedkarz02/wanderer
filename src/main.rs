@@ -222,30 +222,19 @@ fn main() {
     }
 
     match args[1].as_str() {
-        "read" => {
-            let sets = parse_config("tmp.config");
-            let config = Config::build(sets);
-            let (mat, b) = Matrix::from_config(&config);
-            let res = match mat.gaussian_partial_pivot(&b) {
-                Ok(val) => val,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    process::exit(0);
-                }
-            };
-            println!("res: {:?}", res);
-        }
         "compare-config" => {
-            let sets = parse_config("tmp.config");
+            let sets = parse_config(".config");
             let config = Config::build(sets);
             if let Err(e) = comparisons::incremental_compare_config(1, Some(&config)) {
                 eprintln!("{}", e);
                 process::exit(0);
             }
-            // if let Err(e) = comparisons::incremental_compare_config(100, None) {
-            //     eprintln!("{}", e);
-            //     process::exit(0);
-            // }
+        }
+        "compare-inc" => {
+            if let Err(e) = comparisons::incremental_compare_config(100, None) {
+                eprintln!("{}", e);
+                process::exit(0);
+            }
         }
         "compare-default" => {
             comparisons::incremental_compare_default();
@@ -295,12 +284,11 @@ fn main() {
                 }
             }
         }
-        "asdf" => {
-            let n = 2;
-            for i in (10..=n * 10).step_by(10) {
-                println!("{}", i);
-            }
-        }
+        // "check" => {
+        //     let sets = parse_config(".config");
+        //     let config = Config::build(sets);
+
+        // }
         _ => eprintln!("Unrecognised optional argument"),
     }
 }

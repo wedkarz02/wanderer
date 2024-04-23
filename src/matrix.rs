@@ -123,6 +123,22 @@ impl Matrix {
         Ok(out)
     }
 
+    pub fn multiply_by_vec(&self, other: &Vec<f64>) -> Result<Vec<f64>, MatrixError> {
+        if self.rows[0].len() != other.len() {
+            return Err(MatrixError::SizeError);
+        }
+
+        let mut out = vec![0f64; other.len()];
+
+        for i in 0..self.rows.len() {
+            for j in 0..other.len() {
+                out[i] += self.rows[i][j] * other[j];
+            }
+        }
+
+        Ok(out)
+    }
+
     // https://en.wikipedia.org/wiki/Dot_product
     pub fn dot_product(x: &[f64], y: &[f64]) -> f64 {
         return x.iter().zip(y.iter()).map(|(&a, &b)| a * b).sum();
@@ -271,5 +287,17 @@ mod tests {
         let b = Matrix::from_vecs(vec![vec![5.0], vec![2.0], vec![4.0]]);
         let expected_product = Matrix::from_vecs(vec![vec![13.0], vec![16.0], vec![15.0]]);
         assert_eq!(a.multiply(&b).unwrap(), expected_product);
+    }
+
+    #[test]
+    fn test_mul_vec() {
+        let a = Matrix::from_vecs(vec![
+            vec![1.0, 2.0, 1.0],
+            vec![2.0, 1.0, 1.0],
+            vec![1.0, 3.0, 1.0],
+        ]);
+        let b = vec![1.0, 0.0, 0.0];
+        let expected = vec![1.0, 2.0, 1.0];
+        assert_eq!(expected, a.multiply_by_vec(&b).unwrap());
     }
 }
