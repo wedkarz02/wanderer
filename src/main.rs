@@ -237,6 +237,19 @@ fn main() {
                 eprintln!("{}", e);
                 process::exit(0);
             }
+
+            let py_output = Command::new("python3")
+                .arg("scripts/plot_config_cmps.py")
+                .output()
+                .expect("failed to execute python process");
+
+            if py_output.status.success() {
+                let result = String::from_utf8_lossy(&py_output.stdout);
+                println!("{}", result);
+            } else {
+                let error = String::from_utf8_lossy(&py_output.stderr);
+                eprintln!("{}", error);
+            }
         }
         "compare-default" => {
             comparisons::incremental_compare_default();
