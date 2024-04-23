@@ -16,3 +16,6 @@ ref/
 # Temporary files for experiments
 asdf
 asdf.*
+
+# Latex assignment
+sprawozdanie.*
