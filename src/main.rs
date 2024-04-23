@@ -4,7 +4,9 @@ use std::process::Command;
 use std::{env, fs, process};
 
 use base::*;
+use comparisons::compare_vecs;
 use matrix::*;
+use sparse::Sparse;
 
 pub mod base;
 pub mod comparisons;
@@ -284,11 +286,91 @@ fn main() {
                 }
             }
         }
-        // "check" => {
-        //     let sets = parse_config(".config");
-        //     let config = Config::build(sets);
+        "check" => {
+            let sets = parse_config(".config");
+            let config = Config::build(sets);
 
-        // }
+            let (mat, b) = Matrix::from_config(&config);
+            let (sparse, _) = Sparse::from_config(&config);
+            let x0 = vec![0f64; b.len()];
+            let eps = 1e-16;
+            let max_iter = 1_000_000;
+
+            let gpp_res = match mat.gaussian_partial_pivot(&b) {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+            let gpp_sub = mat.multiply_by_vec(&gpp_res).unwrap();
+            let gpp_sparse_res = match sparse.gaussian_partial_pivot(&b) {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+            let gpp_sparse_sub = mat.multiply_by_vec(&gpp_sparse_res).unwrap();
+            let jacobi_res = mat.jacobi(&b, &x0, eps, max_iter);
+            let jacobi_sub = mat.multiply_by_vec(&jacobi_res).unwrap();
+            let jacobi_sparse_res = sparse.jacobi(&b, &x0, eps, max_iter);
+            let jacobi_sparse_sub = mat.multiply_by_vec(&jacobi_sparse_res).unwrap();
+            let seidel_res = mat.gauss_seidel(&b, &x0, eps, max_iter);
+            let seidel_sub = mat.multiply_by_vec(&seidel_res).unwrap();
+            let gauss_res = match mat.gaussian(&b) {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+            let gauss_sub = mat.multiply_by_vec(&gauss_res).unwrap();
+            let gauss_sparse_res = match sparse.gaussian(&b) {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+            let gauss_sparse_sub = mat.multiply_by_vec(&gauss_sparse_res).unwrap();
+
+            if compare_vecs(&gpp_sub, &b, 1e-16) {
+                println!("Gauss (partial pivot): Success")
+            } else {
+                println!("Gauss (partial pivot): Failure")
+            }
+            if compare_vecs(&gpp_sparse_sub, &b, 1e-16) {
+                println!("Sparse Gauss (partial pivot): Success")
+            } else {
+                println!("Sparse Gauss (partial pivot): Failure")
+            }
+            if compare_vecs(&jacobi_sub, &b, 1e-16) {
+                println!("Jacobi: Success")
+            } else {
+                println!("Jacobi: Failure")
+            }
+            if compare_vecs(&jacobi_sparse_sub, &b, 1e-16) {
+                println!("Sparse Jacobi: Success")
+            } else {
+                println!("Sparse Jacobi: Failure")
+            }
+            if compare_vecs(&seidel_sub, &b, 1e-16) {
+                println!("Gauss-Seidel: Success")
+            } else {
+                println!("Gauss-Seidel: Failure")
+            }
+            if compare_vecs(&gauss_sub, &b, 1e-16) {
+                println!("Gauss: Success")
+            } else {
+                println!("Gauss: Failure")
+            }
+            if compare_vecs(&gauss_sparse_sub, &b, 1e-16) {
+                println!("Sparse Gauss: Success")
+            } else {
+                println!("Sparse Gauss: Failure")
+            }
+        }
         _ => eprintln!("Unrecognised optional argument"),
     }
 }

@@ -5,6 +5,20 @@ use crate::Config;
 
 use std::{error::Error, fs, time::Instant};
 
+pub fn compare_vecs(a: &Vec<f64>, b: &Vec<f64>, eps: f64) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+
+    for i in 0..a.len() {
+        if (a[i] - b[i]).abs() > eps {
+            return false;
+        }
+    }
+
+    true
+}
+
 pub fn compare_config(
     cfg: &Config,
     eps: f64,
