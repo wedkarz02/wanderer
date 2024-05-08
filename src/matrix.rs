@@ -50,40 +50,96 @@ impl Matrix {
                 continue;
             }
 
-            let mut alley_ctr = 0f64;
+            // let mut alley_ctr = 0f64;
+            let mut denom = 0f64;
             for alley in &cfg.alleys {
                 if cfg.inters[i].id == alley.a.id || cfg.inters[i].id == alley.b.id {
-                    alley_ctr += 1f64;
+                    // alley_ctr += 1f64;
+                    denom += 1f64 / alley.length as f64;
                 }
             }
 
             for alley in &cfg.alleys {
                 if cfg.inters[i].id == alley.a.id {
-                    out.rows[i][alley.b.id - 1] = if !cfg.deadends.contains(&alley.a.id) {
-                        let mut tmp = -alley.get_propability() / alley_ctr;
-                        if alley.b.trashcan {
-                            tmp /= 2f64;
-                        }
-                        tmp
-                    } else {
-                        1f64
-                    };
+                    // out.rows[i][alley.b.id - 1] = if !cfg.deadends.contains(&alley.a.id) {
+                    //     let mut tmp = -alley.get_propability() / alley_ctr;
+                    //     if alley.b.trashcan {
+                    //         tmp /= 2f64;
+                    //     }
+                    //     tmp
+                    // } else {
+                    //     1f64
+                    // };
+                    out.rows[i][alley.b.id - 1] = -(1f64 / alley.length as f64) / denom;
                 } else if cfg.inters[i].id == alley.b.id {
-                    out.rows[i][alley.a.id - 1] = if !cfg.deadends.contains(&alley.b.id) {
-                        let mut tmp = -alley.get_propability() / alley_ctr;
-                        if alley.a.trashcan {
-                            tmp /= 2f64;
-                        }
-                        tmp
-                    } else {
-                        1f64
-                    };
+                    // out.rows[i][alley.a.id - 1] = if !cfg.deadends.contains(&alley.b.id) {
+                    //     let mut tmp = -alley.get_propability() / alley_ctr;
+                    //     if alley.a.trashcan {
+                    //         tmp /= 2f64;
+                    //     }
+                    //     tmp
+                    // } else {
+                    //     1f64
+                    // };
+                    out.rows[i][alley.a.id - 1] = -(1f64 / alley.length as f64) / denom;
                 }
             }
         }
 
         (out, b)
     }
+
+    // pub fn from_config(cfg: &Config) -> (Self, Vec<f64>) {
+    //     let n = cfg.inters.len();
+    //     let mut out = Self::from_size(n, n);
+    //     let mut b = vec![0f64; n];
+
+    //     for i in 0..n {
+    //         out.rows[i][i] = 1f64;
+    //         if cfg.inters[i].exit {
+    //             b[i] = 1f64;
+    //         }
+    //     }
+
+    //     for i in 0..n {
+    //         if cfg.inters[i].exit || cfg.inters[i].well {
+    //             continue;
+    //         }
+
+    //         let mut alley_ctr = 0f64;
+    //         for alley in &cfg.alleys {
+    //             if cfg.inters[i].id == alley.a.id || cfg.inters[i].id == alley.b.id {
+    //                 alley_ctr += 1f64;
+    //             }
+    //         }
+
+    //         for alley in &cfg.alleys {
+    //             if cfg.inters[i].id == alley.a.id {
+    //                 out.rows[i][alley.b.id - 1] = if !cfg.deadends.contains(&alley.a.id) {
+    //                     let mut tmp = -alley.get_propability() / alley_ctr;
+    //                     if alley.b.trashcan {
+    //                         tmp /= 2f64;
+    //                     }
+    //                     tmp
+    //                 } else {
+    //                     1f64
+    //                 };
+    //             } else if cfg.inters[i].id == alley.b.id {
+    //                 out.rows[i][alley.a.id - 1] = if !cfg.deadends.contains(&alley.b.id) {
+    //                     let mut tmp = -alley.get_propability() / alley_ctr;
+    //                     if alley.a.trashcan {
+    //                         tmp /= 2f64;
+    //                     }
+    //                     tmp
+    //                 } else {
+    //                     1f64
+    //                 };
+    //             }
+    //         }
+    //     }
+
+    //     (out, b)
+    // }
 
     pub fn to_file(&self, file_path: &'static str) -> Result<(), Box<dyn Error>> {
         let mut file = File::create(file_path)?;

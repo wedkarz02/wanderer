@@ -268,13 +268,13 @@ fn main() {
             }
         }
         "gen-config" => {
-            if let Err(e) = gen_config(1000, 1000) {
+            if let Err(e) = gen_config(4, 4) {
                 eprintln!("{}", e);
                 process::exit(0);
             }
         }
         "verify" => {
-            let sets = parse_config(".config");
+            let sets = parse_config("default.config");
             let config = Config::build(sets);
 
             let mut map: HashMap<usize, f64> = HashMap::new();
@@ -300,7 +300,7 @@ fn main() {
             }
         }
         "check" => {
-            let sets = parse_config(".config");
+            let sets = parse_config("default.config");
             let config = Config::build(sets);
 
             let (mat, b) = Matrix::from_config(&config);
@@ -383,6 +383,53 @@ fn main() {
             } else {
                 println!("Sparse Gauss: Failure")
             }
+        }
+        "sim-walk" => {
+            let sets = parse_config("default.config");
+            let config = Config::build(sets);
+            let (mat, b) = Matrix::from_config(&config);
+            println!("{}{:?}", mat, b);
+
+            let mc_res = monte_carlo::simulate_park_walk(&config, 10_000);
+            println!("mc: {}", mc_res);
+
+            let mat_res = mat.gaussian_partial_pivot(&b).unwrap()[config.starting_pos];
+            println!("gs: {}", mat_res);
+        }
+        "asdf" => {
+            let mat = Matrix::from_vecs(vec![
+                vec![1.0, 0.0, 0.0, 0.0],
+                vec![0.0, 1.0, 0.0, 0.0],
+                vec![-6.0 / 14.0, -4.0 / 14.0, 1.0, -4.0 / 14.0],
+                vec![0.0, 0.0, 0.0, 1.0],
+            ]);
+            let b = vec![0.0, 1.0, 0.0, 1.0];
+            // let sets = parse_config("default.config");
+            // let config = Config::build(sets);
+            // let (mat, b) = Matrix::from_config(&config);
+            println!("{}{:?}", mat, b);
+            let mat_res = mat.gaussian_partial_pivot(&b).unwrap();
+            println!("{:?}", mat_res);
+
+            let bnew = mat.multiply_by_vec(&mat_res);
+            println!("{:?}", bnew);
+        }
+        "from-cfg" => {
+            let sets = parse_config("default.config");
+            let config = Config::build(sets);
+            let (mat, b) = Matrix::from_config(&config);
+
+            println!("{}", mat);
+            println!("{:?}", b);
+
+            let mat_res = mat.gaussian_partial_pivot(&b).unwrap();
+            println!("gs: {:?}", mat_res);
+
+            let mc_res = monte_carlo::simulate_park_walk(&config, 10_000);
+            println!("mc: {}", mc_res);
+
+            let bnew = mat.multiply_by_vec(&mat_res);
+            println!("{:?}", bnew);
         }
         _ => eprintln!("Unrecognised optional argument"),
     }
