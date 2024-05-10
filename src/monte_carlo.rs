@@ -44,39 +44,31 @@ pub fn walk_park(config: &Config) -> bool {
         let mut possible_alleys = vec![];
         for alley in &config.alleys {
             if alley.a.id == pos {
-                if alley.a.exit {
-                    return true;
-                } else if alley.a.well {
-                    return false;
-                }
-
                 possible_alleys.push(alley.b.id);
-                // if !alley.b.trashcan {
-                //     possible_alleys.push(alley.b.id);
-                // }
             } else if alley.b.id == pos {
-                if alley.b.exit {
-                    return true;
-                } else if alley.b.well {
-                    return false;
-                }
-
                 possible_alleys.push(alley.a.id);
-                // if !alley.a.trashcan {
-                //     possible_alleys.push(alley.a.id);
-                // }
             }
         }
 
         let idx = thread_rng().gen_range(0..possible_alleys.len());
         for alley in &config.alleys {
-            if alley.a.id == possible_alleys[idx] {
+            if alley.a.id == possible_alleys[idx] && alley.b.id == pos {
                 if walk(alley.length + 1, alley.length - 1) {
                     pos = alley.a.id;
+                    if alley.a.exit {
+                        return true;
+                    } else if alley.a.well {
+                        return false;
+                    }
                 }
-            } else if alley.b.id == possible_alleys[idx] {
+            } else if alley.b.id == possible_alleys[idx] && alley.a.id == pos {
                 if walk(alley.length + 1, alley.length - 1) {
                     pos = alley.b.id;
+                    if alley.b.exit {
+                        return true;
+                    } else if alley.b.well {
+                        return false;
+                    }
                 }
             }
         }

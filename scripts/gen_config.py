@@ -69,18 +69,3 @@ while start in wells or start in exits:
     start = random.randint(1, inter_count)
 
 print(1, start)
-
-trashcans = []
-max_trashcan = inter_count // 2
-trashcan_count = random.randint(0, max_trashcan)
-for i in range(1, trashcan_count+1):
-    rand_trashcan = random.randint(1, inter_count)
-    while rand_trashcan in trashcans:
-        rand_trashcan = random.randint(1, inter_count)
-
-    trashcans.append(rand_trashcan)
-
-print(trashcan_count, end=" ")
-for tr in trashcans:
-    print(tr, end=" ")
-print()

@@ -20,17 +20,15 @@ pub struct Sets(Vec<Vec<Vec<usize>>>);
 #[derive(Debug, Clone)]
 pub struct Intersection {
     pub id: usize,
-    pub trashcan: bool,
     pub start: bool,
     pub well: bool,
     pub exit: bool,
 }
 
 impl Intersection {
-    pub fn new(id: usize, trashcan: bool, start: bool, well: bool, exit: bool) -> Self {
+    pub fn new(id: usize, start: bool, well: bool, exit: bool) -> Self {
         Self {
             id,
-            trashcan,
             start,
             well,
             exit,
@@ -61,20 +59,17 @@ impl Alley {
 pub struct Config {
     pub inters: Vec<Intersection>,
     pub alleys: Vec<Alley>,
-    pub deadends: Vec<usize>,
     pub starting_pos: usize,
 }
 
 impl Config {
-    // This is not at all resistant to incorrect config file and will panic
-    // left and right. It's not that important right now but should be fixed later.
     pub fn build(sets: Sets) -> Self {
         let inters_count = sets.0[0][0][0];
         let alleys_count = sets.0[0][0][1];
 
         let mut inters = Vec::new();
         for i in 1..inters_count + 1 {
-            inters.push(Intersection::new(i, false, false, false, false));
+            inters.push(Intersection::new(i, false, false, false));
         }
 
         for i in 1..sets.0[1][0].len() {
@@ -102,20 +97,12 @@ impl Config {
             }
         }
 
-        for i in 1..sets.0[1][3].len() {
-            for inter in &mut inters {
-                if inter.id == sets.0[1][3][i] {
-                    inter.trashcan = true;
-                }
-            }
-        }
-
         let mut alleys = Vec::new();
         for i in 1..alleys_count + 1 {
             let a_id = sets.0[0][i][0];
             let b_id = sets.0[0][i][1];
-            let mut a = Intersection::new(0, false, false, false, false);
-            let mut b = Intersection::new(0, false, false, false, false);
+            let mut a = Intersection::new(0, false, false, false);
+            let mut b = Intersection::new(0, false, false, false);
             let length = sets.0[0][i][2];
             for inter in &inters {
                 if inter.id == a_id {
@@ -128,42 +115,9 @@ impl Config {
             alleys.push(Alley::new(a, b, length));
         }
 
-        let mut dead_ends: Vec<usize> = Vec::new();
-        let mut not_dead_ends: Vec<usize> = Vec::new();
-
-        for alley in &alleys {
-            if !not_dead_ends.contains(&alley.a.id) {
-                if dead_ends.contains(&alley.a.id) {
-                    not_dead_ends.push(alley.a.id);
-                    for i in 0..dead_ends.len() {
-                        if dead_ends[i] == alley.a.id {
-                            dead_ends.remove(i);
-                            break;
-                        }
-                    }
-                } else {
-                    dead_ends.push(alley.a.id);
-                }
-            }
-            if !not_dead_ends.contains(&alley.b.id) {
-                if dead_ends.contains(&alley.b.id) {
-                    not_dead_ends.push(alley.b.id);
-                    for i in 0..dead_ends.len() {
-                        if dead_ends[i] == alley.b.id {
-                            dead_ends.remove(i);
-                            break;
-                        }
-                    }
-                } else {
-                    dead_ends.push(alley.b.id);
-                }
-            }
-        }
-
         Self {
             inters,
             alleys,
-            deadends: dead_ends,
             starting_pos,
         }
     }
@@ -425,11 +379,22 @@ fn main() {
             let mat_res = mat.gaussian_partial_pivot(&b).unwrap();
             println!("gs: {:?}", mat_res);
 
-            let mc_res = monte_carlo::simulate_park_walk(&config, 10_000);
+            let mc_res = monte_carlo::simulate_park_walk(&config, 100_000);
             println!("mc: {}", mc_res);
 
             let bnew = mat.multiply_by_vec(&mat_res);
             println!("{:?}", bnew);
+
+            let (sparse, b) = Sparse::from_config(&config);
+
+            println!("{}", sparse);
+            println!("{:?}", b);
+
+            let sp_res = sparse.gaussian_partial_pivot(&b).unwrap();
+            println!("sp gs: {:?}", sp_res);
+
+            let bspnew = sparse.multiply_by_vec(&sp_res);
+            println!("{:?}", bspnew);
         }
         _ => eprintln!("Unrecognised optional argument"),
     }

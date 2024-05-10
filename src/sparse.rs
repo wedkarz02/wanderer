@@ -60,36 +60,20 @@ impl Sparse {
                 continue;
             }
 
-            let mut alley_ctr = 0f64;
+            let mut denom = 0f64;
             for alley in &cfg.alleys {
                 if cfg.inters[i].id == alley.a.id || cfg.inters[i].id == alley.b.id {
-                    alley_ctr += 1f64;
+                    denom += 1f64 / alley.length as f64;
                 }
             }
 
             for alley in &cfg.alleys {
                 if cfg.inters[i].id == alley.a.id {
-                    let value = if !cfg.deadends.contains(&alley.a.id) {
-                        let mut tmp = -alley.get_propability() / alley_ctr;
-                        if alley.b.trashcan {
-                            tmp /= 2f64;
-                        }
-                        tmp
-                    } else {
-                        1f64
-                    };
-                    out.data.insert((i, alley.b.id - 1), value);
+                    out.data
+                        .insert((i, alley.b.id - 1), -(1f64 / alley.length as f64) / denom);
                 } else if cfg.inters[i].id == alley.b.id {
-                    let value = if !cfg.deadends.contains(&alley.b.id) {
-                        let mut tmp = -alley.get_propability() / alley_ctr;
-                        if alley.a.trashcan {
-                            tmp /= 2f64;
-                        }
-                        tmp
-                    } else {
-                        1f64
-                    };
-                    out.data.insert((i, alley.a.id - 1), value);
+                    out.data
+                        .insert((i, alley.a.id - 1), -(1f64 / alley.length as f64) / denom);
                 }
             }
         }
