@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::process::Command;
+use std::time::Instant;
 use std::{env, fs, process};
 
 use base::*;
-use comparisons::compare_vecs;
+use comparisons::{compare_vecs, incremental_verify_mc};
 use matrix::*;
 use sparse::Sparse;
 
@@ -222,7 +223,7 @@ fn main() {
             }
         }
         "gen-config" => {
-            if let Err(e) = gen_config(4, 4) {
+            if let Err(e) = gen_config(1000, 1500) {
                 eprintln!("{}", e);
                 process::exit(0);
             }
@@ -351,50 +352,168 @@ fn main() {
             println!("gs: {}", mat_res);
         }
         "asdf" => {
-            let mat = Matrix::from_vecs(vec![
-                vec![1.0, 0.0, 0.0, 0.0],
-                vec![0.0, 1.0, 0.0, 0.0],
-                vec![-6.0 / 14.0, -4.0 / 14.0, 1.0, -4.0 / 14.0],
-                vec![0.0, 0.0, 0.0, 1.0],
-            ]);
-            let b = vec![0.0, 1.0, 0.0, 1.0];
-            // let sets = parse_config("default.config");
-            // let config = Config::build(sets);
-            // let (mat, b) = Matrix::from_config(&config);
-            println!("{}{:?}", mat, b);
-            let mat_res = mat.gaussian_partial_pivot(&b).unwrap();
-            println!("{:?}", mat_res);
+            let sets = parse_config("tmp.config");
+            let config = Config::build(sets);
+            let (mat, _) = Matrix::from_config(&config);
+            let (sparse, b) = Sparse::from_config(&config);
+            let x0 = vec![0f64; b.len()];
+            let eps = 1e-16;
+            let max_iter = 1_000;
 
-            let bnew = mat.multiply_by_vec(&mat_res);
-            println!("{:?}", bnew);
+            let gpp_start = Instant::now();
+            let gpp_result = mat.gaussian_partial_pivot(&b);
+            let gpp_elapsed = gpp_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(gpp_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let gpp_result = match gpp_result {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+
+            let gpp_sparse_start = Instant::now();
+            let gpp_sparse_res = sparse.gaussian_partial_pivot(&b);
+            let gpp_sparse_elapsed = gpp_sparse_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(gpp_sparse_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let gpp_sparse_res = match gpp_sparse_res {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+
+            let jacobi_start = Instant::now();
+            let jacobi_res = mat.jacobi(&b, &x0, eps, max_iter);
+            let jacobi_elapsed = jacobi_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(jacobi_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let jacobi_sparse_start = Instant::now();
+            let jacobi_sparse_res = sparse.jacobi(&b, &x0, eps, max_iter);
+            let jacobi_sparse_elapsed = jacobi_sparse_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(jacobi_sparse_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let seidel_start = Instant::now();
+            let seidel_res = mat.gauss_seidel(&b, &x0, eps, max_iter);
+            let seidel_elapsed = seidel_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(seidel_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let seidel_sparse_start = Instant::now();
+            let seidel_sparse_res = sparse.gauss_seidel(&b, &x0, eps, max_iter);
+            let seidel_sparse_elapsed = seidel_sparse_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(seidel_sparse_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let gauss_start = Instant::now();
+            let gauss_res = mat.gaussian(&b);
+            let gauss_elapsed = gauss_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(gauss_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let gauss_res = match gauss_res {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+
+            let gauss_sparse_start = Instant::now();
+            let gauss_sparse_res = sparse.gaussian(&b);
+            let gauss_sparse_elapsed = gauss_sparse_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(gauss_sparse_start.elapsed().subsec_nanos()) / 1_000_000.0;
+
+            let gauss_sparse_res = match gauss_sparse_res {
+                Ok(values) => values,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    process::exit(0);
+                }
+            };
+
+            println!("\nMAT:");
+            println!(
+                "gauss: {} in {:.6}ms",
+                gauss_res[config.starting_pos], gauss_elapsed
+            );
+            println!(
+                "gauss pp: {} in {:.6}ms",
+                gpp_result[config.starting_pos], gpp_elapsed
+            );
+            println!(
+                "gauss seidel: {} in {:.6}ms",
+                seidel_res[config.starting_pos], seidel_elapsed
+            );
+            println!(
+                "jacobi: {} in {:.6}ms",
+                jacobi_res[config.starting_pos], jacobi_elapsed
+            );
+            println!("\nSPARSE:");
+            println!(
+                "gauss: {} in {:.6}ms",
+                gauss_sparse_res[config.starting_pos], gauss_sparse_elapsed
+            );
+            println!(
+                "gauss pp: {} in {:.6}ms",
+                gpp_sparse_res[config.starting_pos], gpp_sparse_elapsed
+            );
+            println!(
+                "gauss seidel: {} in {:.6}ms",
+                seidel_sparse_res[config.starting_pos], seidel_sparse_elapsed
+            );
+            println!(
+                "jacobi: {} in {:.6}ms",
+                jacobi_sparse_res[config.starting_pos], jacobi_sparse_elapsed
+            );
         }
         "from-cfg" => {
-            let sets = parse_config("default.config");
+            // NOTE:
+            //   - Jacobi    -> OK
+            //   - Gauss PP  -> OK
+            //   - Gauss     -> OK
+            //   - Seidel    -> OK
+            //
+            //   - Sparse Jacobi    -> OK
+            //   - Sparse Gauss PP  -> Results OK but way to slow
+            //   - Sparse Gauss     -> Results OK but way to slow
+            //   - Sparse Seidel    -> Results OK but way to slow
+
+            let sets = parse_config("tmp.config");
             let config = Config::build(sets);
             let (mat, b) = Matrix::from_config(&config);
+            // let x0 = vec![0f64; b.len()];
 
-            println!("{}", mat);
-            println!("{:?}", b);
-
-            let mat_res = mat.gaussian_partial_pivot(&b).unwrap();
-            println!("gs: {:?}", mat_res);
+            // let mat_res = mat.gauss_seidel(&b, &x0, 1e-8, 1_000);
+            let mat_res = mat.gaussian(&b).unwrap();
+            println!("gauss: {:?}", mat_res[config.starting_pos]);
 
             let mc_res = monte_carlo::simulate_park_walk(&config, 100_000);
             println!("mc: {}", mc_res);
 
-            let bnew = mat.multiply_by_vec(&mat_res);
-            println!("{:?}", bnew);
-
             let (sparse, b) = Sparse::from_config(&config);
+            // let sp_res = sparse.gauss_seidel(&b, &x0, 1e-8, 1_000);
+            let sp_res = sparse.gaussian(&b).unwrap();
+            println!("sp gauss: {:?}", sp_res[config.starting_pos]);
+        }
+        "verify-mc" => {
+            if let Err(e) = incremental_verify_mc(100, None) {
+                eprintln!("{}", e);
+                process::exit(0);
+            }
 
-            println!("{}", sparse);
-            println!("{:?}", b);
+            let py_output = Command::new("python3")
+                .arg("scripts/plot_verify_mc.py")
+                .output()
+                .expect("failed to execute python process");
 
-            let sp_res = sparse.gaussian_partial_pivot(&b).unwrap();
-            println!("sp gs: {:?}", sp_res);
-
-            let bspnew = sparse.multiply_by_vec(&sp_res);
-            println!("{:?}", bspnew);
+            if py_output.status.success() {
+                let result = String::from_utf8_lossy(&py_output.stdout);
+                println!("{}", result);
+            } else {
+                let error = String::from_utf8_lossy(&py_output.stderr);
+                eprintln!("{}", error);
+            }
         }
         _ => eprintln!("Unrecognised optional argument"),
     }

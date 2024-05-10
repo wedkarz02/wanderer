@@ -1,5 +1,6 @@
 use crate::base::*;
 use crate::matrix::*;
+use crate::monte_carlo;
 use crate::sparse::*;
 use crate::Config;
 
@@ -302,4 +303,48 @@ pub fn incremental_compare_default() {
     fs::write("dump/default_no_sparse_results.csv", ns_res_str).unwrap();
     fs::write("dump/default_sparse_time.csv", s_row_str).unwrap();
     fs::write("dump/default_sparse_results.csv", s_res_str).unwrap();
+}
+
+pub fn incremental_verify_mc(n: usize, cfg: Option<&Config>) -> Result<(), Box<dyn Error>> {
+    let mut lines = Vec::new();
+    lines.push(String::from("n;gauss_pivot;mc;err;other"));
+
+    for i in (10..=n * 10).step_by(10) {
+        let config = match cfg {
+            Some(c) => c.clone(),
+            None => {
+                let mut tmp_res = 0f64;
+                while tmp_res == 0f64 || tmp_res == 1f64 {
+                    crate::gen_config(i, (3 * i) / 2)?;
+                    let sets = crate::parse_config("tmp.config");
+                    let config = Config::build(sets);
+                    let (sparse, b) = Sparse::from_config(&config);
+                    tmp_res = sparse.gaussian_partial_pivot(&b).unwrap()[config.starting_pos];
+                }
+                let sets = crate::parse_config("tmp.config");
+                Config::build(sets).clone()
+            }
+        };
+
+        let (sparse, b) = Sparse::from_config(&config);
+        let sparse_res = match sparse.gaussian_partial_pivot(&b) {
+            Ok(values) => values[config.starting_pos],
+            Err(e) => return Err(Box::new(e)),
+        };
+
+        let mc_res = monte_carlo::simulate_park_walk(&config, i * 200);
+
+        lines.push(format!(
+            "{};{};{};{}",
+            i,
+            sparse_res,
+            mc_res,
+            (sparse_res - mc_res).abs(),
+        ));
+    }
+
+    let lines_str = lines.join("\n");
+    fs::write("dump/mc_verify.csv", lines_str).unwrap();
+
+    Ok(())
 }

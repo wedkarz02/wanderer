@@ -166,10 +166,10 @@ impl MatrixBase for Sparse {
                 };
 
                 for k in i..b_new.len() {
-                    let entry = a.get_value(i, k);
-                    if let Some(val) = a.data.get_mut(&(j, k)) {
-                        *val -= factor * entry;
-                    }
+                    match a.data.get(&(i, k)) {
+                        Some(entry) => a.data.insert((j, k), a.get_value(j, k) - factor * entry),
+                        None => continue,
+                    };
                 }
                 b_new[j] -= factor * b_new[i];
             }
@@ -179,7 +179,10 @@ impl MatrixBase for Sparse {
         for i in (0..b_new.len()).rev() {
             out[i] = b_new[i];
             for j in (i + 1)..b_new.len() {
-                out[i] -= a.get_value(i, j) * out[j];
+                out[i] -= match a.data.get(&(i, j)) {
+                    Some(val) => val * out[j],
+                    None => continue,
+                };
             }
             out[i] /= a.get_value(i, i);
             if out[i].is_nan() {
@@ -232,17 +235,14 @@ impl MatrixBase for Sparse {
     fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
         let mut x = x0.clone();
 
-        // FIXME: This is ridiculously slow for some reason
-        //        590 seconds for 1k x 1k matrix, 1e-6 eps and 1mil max_iter
-
         for it in 0..max_iter {
-            let mut x_new = vec![0.0; b.len()];
+            let mut x_new = vec![0f64; b.len()];
             let mut error = 0f64;
 
             for i in 0..b.len() {
                 for (pos, val) in &self.data {
                     if pos.0 != pos.1 && pos.0 == i {
-                        x_new[pos.0] += val * if pos.1 < i { x_new[pos.1] } else { x[pos.1] };
+                        x_new[i] += val * if pos.1 < i { x_new[pos.1] } else { x[pos.1] };
                     }
                 }
 
@@ -251,7 +251,7 @@ impl MatrixBase for Sparse {
             }
 
             if error < eps {
-                println!("Gauss-Seidel breaking at: {} iterations", it);
+                println!("sparse seidel breaking at: {} iterations", it);
                 break;
             }
 
