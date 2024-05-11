@@ -223,7 +223,7 @@ fn main() {
             }
         }
         "gen-config" => {
-            if let Err(e) = gen_config(1000, 1500) {
+            if let Err(e) = gen_config(4500, 6000) {
                 eprintln!("{}", e);
                 process::exit(0);
             }
@@ -357,8 +357,8 @@ fn main() {
             let (mat, _) = Matrix::from_config(&config);
             let (sparse, b) = Sparse::from_config(&config);
             let x0 = vec![0f64; b.len()];
-            let eps = 1e-16;
-            let max_iter = 1_000;
+            let eps = 1e-10;
+            let max_iter = 10_000;
 
             let gpp_start = Instant::now();
             let gpp_result = mat.gaussian_partial_pivot(&b);
@@ -431,6 +431,13 @@ fn main() {
                     process::exit(0);
                 }
             };
+
+            println!("\nMC:");
+            let mc_start = Instant::now();
+            let mc_res = monte_carlo::simulate_park_walk(&config, 30_000);
+            let mc_elapsed = mc_start.elapsed().as_secs_f64() * 1000.0
+                + f64::from(mc_start.elapsed().subsec_nanos()) / 1_000_000.0;
+            println!("mc: {} in {:.6}ms", mc_res, mc_elapsed);
 
             println!("\nMAT:");
             println!(

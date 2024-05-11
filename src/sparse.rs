@@ -260,6 +260,36 @@ impl MatrixBase for Sparse {
 
         x
     }
+    // fn gauss_seidel(&self, b: &Vec<f64>, x0: &Vec<f64>, eps: f64, max_iter: usize) -> Vec<f64> {
+    //     let mut x = x0.clone();
+
+    //     for it in 0..max_iter {
+    //         let mut error = 0f64;
+    //         for i in 0..b.len() {
+    //             let mut sum = b[i];
+    //             let mut diag = 0.0; // store diagonal element separately
+    //             for (pos, val) in &self.data {
+    //                 if pos.0 == i {
+    //                     if pos.1 != i {
+    //                         sum -= x[pos.1] * val;
+    //                     } else {
+    //                         diag = *val;
+    //                     }
+    //                 }
+    //             }
+    //             let prev = x[i];
+    //             x[i] = sum / diag; // update x in place
+    //             error = error.max((prev - x[i]).abs());
+    //         }
+
+    //         if error < eps {
+    //             println!("sparse gauss-seidel breaking at: {} iterations", it);
+    //             break;
+    //         }
+    //     }
+
+    //     x
+    // } // }
 }
 
 #[cfg(test)]
