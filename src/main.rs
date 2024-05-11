@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::process::Command;
 use std::time::Instant;
@@ -223,35 +222,9 @@ fn main() {
             }
         }
         "gen-config" => {
-            if let Err(e) = gen_config(4500, 6000) {
+            if let Err(e) = gen_config(1000, 1500) {
                 eprintln!("{}", e);
                 process::exit(0);
-            }
-        }
-        "verify" => {
-            let sets = parse_config("default.config");
-            let config = Config::build(sets);
-
-            let mut map: HashMap<usize, f64> = HashMap::new();
-
-            for alley in &config.alleys {
-                map.insert(alley.length, alley.get_propability());
-            }
-
-            let max_iter = 10_000;
-            let eps = 1e-2;
-
-            for entry in map {
-                let n = entry.0 + 2;
-                let start = n - 2;
-                let mc_result = monte_carlo::simulate_walk(n, start, max_iter);
-
-                println!("built: {}\nmc: {}", entry.1, mc_result);
-                if (entry.1 - mc_result).abs() > eps {
-                    println!("Failed.\n");
-                } else {
-                    println!("Succeeded.\n");
-                }
             }
         }
         "check" => {
@@ -339,26 +312,14 @@ fn main() {
                 println!("Sparse Gauss: Failure")
             }
         }
-        "sim-walk" => {
-            let sets = parse_config("default.config");
-            let config = Config::build(sets);
-            let (mat, b) = Matrix::from_config(&config);
-            println!("{}{:?}", mat, b);
-
-            let mc_res = monte_carlo::simulate_park_walk(&config, 10_000);
-            println!("mc: {}", mc_res);
-
-            let mat_res = mat.gaussian_partial_pivot(&b).unwrap()[config.starting_pos];
-            println!("gs: {}", mat_res);
-        }
-        "asdf" => {
+        "time-all" => {
             let sets = parse_config("tmp.config");
             let config = Config::build(sets);
             let (mat, _) = Matrix::from_config(&config);
             let (sparse, b) = Sparse::from_config(&config);
             let x0 = vec![0f64; b.len()];
-            let eps = 1e-10;
-            let max_iter = 10_000;
+            let eps = 1e-16;
+            let max_iter = 1_000;
 
             let gpp_start = Instant::now();
             let gpp_result = mat.gaussian_partial_pivot(&b);
@@ -488,18 +449,15 @@ fn main() {
 
             let sets = parse_config("tmp.config");
             let config = Config::build(sets);
-            let (mat, b) = Matrix::from_config(&config);
-            // let x0 = vec![0f64; b.len()];
+            let (mat, _) = Matrix::from_config(&config);
+            let (sparse, b) = Sparse::from_config(&config);
 
-            // let mat_res = mat.gauss_seidel(&b, &x0, 1e-8, 1_000);
+            let mc_res = monte_carlo::simulate_park_walk(&config, 10_000);
+            println!("mc: {}", mc_res);
+
             let mat_res = mat.gaussian(&b).unwrap();
             println!("gauss: {:?}", mat_res[config.starting_pos]);
 
-            let mc_res = monte_carlo::simulate_park_walk(&config, 100_000);
-            println!("mc: {}", mc_res);
-
-            let (sparse, b) = Sparse::from_config(&config);
-            // let sp_res = sparse.gauss_seidel(&b, &x0, 1e-8, 1_000);
             let sp_res = sparse.gaussian(&b).unwrap();
             println!("sp gauss: {:?}", sp_res[config.starting_pos]);
         }
