@@ -37,6 +37,7 @@ plt.savefig("img/default_no_sparse_time.png")
 
 n_s = []
 jacobi_s = []
+seidel_s = []
 gauss_s = []
 gp_s = []
 
@@ -46,16 +47,19 @@ with open("dump/default_sparse_time.csv", "r") as f:
     for row in reader:
         n_s.append(int(row[0]))
         jacobi_s.append(float(row[1]))
-        gauss_s.append(float(row[2]))
-        gp_s.append(float(row[3]))
+        seidel_s.append(float(row[2]))
+        gauss_s.append(float(row[3]))
+        gp_s.append(float(row[4]))
 
 plt.figure()
 plt.yscale("log")
-plt.plot(n_ns, jacobi_s, color="red",
+plt.plot(n_s, jacobi_s, color="red",
          linestyle="-", marker="", label="Jacobi")
-plt.plot(n_ns, gauss_s, color="green", linestyle="-",
+plt.plot(n_s, seidel_s, color="blue",
+         linestyle="-", marker="", label="Gauss-Seidel")
+plt.plot(n_s, gauss_s, color="green", linestyle="-",
          marker="", label="Gauss")
-plt.plot(n_ns, gp_s, color="orange", linestyle="-",
+plt.plot(n_s, gp_s, color="orange", linestyle="-",
          marker="", label="Gauss (wybór częściowy)")
 plt.xlabel("Rozmiar macierzy rzadkiej")
 plt.ylabel("Czas wykonania (w ms)")
